@@ -1,0 +1,100 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply box-border;
+  }
+
+  html,
+  body,
+  #root {
+    @apply w-full h-full m-0 p-0 overflow-hidden;
+    background-color: transparent;
+  }
+
+  body {
+    @apply font-sans antialiased;
+    -webkit-app-region: no-drag;
+  }
+}
+
+@layer utilities {
+  .drag-region {
+    -webkit-app-region: drag;
+  }
+
+  .no-drag-region {
+    -webkit-app-region: no-drag;
+  }
+
+  .glass-effect {
+    @apply backdrop-blur-xl bg-white/10 dark:bg-black/20;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  .glass-effect-dark {
+    @apply backdrop-blur-xl;
+    background: rgba(15, 23, 42, 0.8);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  .glass-effect-light {
+    @apply backdrop-blur-xl;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  .theme-bg {
+    @apply bg-slate-900;
+  }
+
+  .dark .theme-bg {
+    @apply bg-slate-900;
+  }
+
+  html:not(.dark) .theme-bg {
+    @apply bg-slate-50;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+.drag-region {
+  -webkit-app-region: drag;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.no-drag-region {
+  -webkit-app-region: no-drag;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-primary-500/30 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-primary-500/50;
+}
+
+/* Dark mode scrollbar */
+.dark ::-webkit-scrollbar-thumb {
+  @apply bg-white/20;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  @apply bg-white/30;
+}
