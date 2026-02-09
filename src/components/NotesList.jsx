@@ -36,6 +36,7 @@ export function NotesList({ notes, onDelete, onUpdate, theme }) {
                         key={note.id}
                         note={note}
                         index={index}
+                        theme={theme}
                         onDelete={onDelete}
                         onUpdate={onUpdate}
                     />

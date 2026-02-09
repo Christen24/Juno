@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import { noteCardVariants } from '../utils/animations';
 import { useState } from 'react';
 
-export function NoteCard({ note, index, onDelete, onUpdate }) {
+export function NoteCard({ note, index, onDelete, onUpdate, theme }) {
     const [isEditing, setIsEditing] = useState(false);
     const [editContent, setEditContent] = useState(note.content);
 
@@ -43,11 +43,13 @@ export function NoteCard({ note, index, onDelete, onUpdate }) {
             className="group relative"
         >
             <div
-                className="p-3 rounded-lg backdrop-blur-md border border-white/10 
-                   hover:border-white/20 transition-all shadow-lg"
+                className="p-3 rounded-lg backdrop-blur-md border transition-all shadow-sm group-hover:shadow-md"
                 style={{
-                    backgroundColor: `${note.color || '#0ea5e9'}20`,
-                    borderLeft: `3px solid ${note.color || '#0ea5e9'}`,
+                    backgroundColor: `var(--theme-card-bg)`,
+                    borderColor: 'var(--theme-border)',
+                    borderLeft: `3px solid ${note.color || 'var(--theme-accent)'}`,
+                    // subtle tint of note color
+                    boxShadow: theme === 'midnight' ? 'none' : undefined
                 }}
             >
                 {/* Content */}
@@ -56,8 +58,9 @@ export function NoteCard({ note, index, onDelete, onUpdate }) {
                         <textarea
                             value={editContent}
                             onChange={(e) => setEditContent(e.target.value)}
-                            className="w-full px-2 py-1 bg-white/5 border border-white/10 rounded text-white 
+                            className="w-full px-2 py-1 bg-black/10 dark:bg-white/5 border border-white/10 rounded 
                        text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary-500/50"
+                            style={{ color: 'var(--theme-text-primary)' }}
                             rows={3}
                             autoFocus
                         />
@@ -73,7 +76,8 @@ export function NoteCard({ note, index, onDelete, onUpdate }) {
                                     setEditContent(note.content);
                                     setIsEditing(false);
                                 }}
-                                className="px-3 py-1 bg-white/5 text-white rounded text-xs hover:bg-white/10 transition-colors"
+                                className="px-3 py-1 bg-white/5 rounded text-xs hover:bg-white/10 transition-colors"
+                                style={{ color: 'var(--theme-text-primary)' }}
                             >
                                 Cancel
                             </button>
@@ -81,13 +85,13 @@ export function NoteCard({ note, index, onDelete, onUpdate }) {
                     </div>
                 ) : (
                     <>
-                        <p className="text-white text-sm leading-relaxed break-words">
+                        <p className="text-sm leading-relaxed break-words" style={{ color: 'var(--theme-text-primary)' }}>
                             {note.content}
                         </p>
 
                         {/* Reminder badge */}
                         {reminderText && (
-                            <div className="mt-2 flex items-center gap-1 text-xs text-white/70">
+                            <div className="mt-2 flex items-center gap-1 text-xs" style={{ color: 'var(--theme-text-secondary)' }}>
                                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                                 </svg>
@@ -96,7 +100,7 @@ export function NoteCard({ note, index, onDelete, onUpdate }) {
                         )}
 
                         {/* Timestamp */}
-                        <div className="mt-2 text-xs text-white/50">
+                        <div className="mt-2 text-xs" style={{ color: 'var(--theme-text-secondary)', opacity: 0.7 }}>
                             {new Date(note.createdAt).toLocaleDateString('en-US', {
                                 month: 'short',
                                 day: 'numeric',

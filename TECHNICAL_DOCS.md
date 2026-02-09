@@ -28,10 +28,11 @@ Juno follows the standard Electron multi-process architecture:
 
 ### 3. Data Storage
 *   **Notes**: Stored in a local SQLite database (`AppData/Roaming/juno/notes.db`).
-    *   Schema: `id` (INTEGER PK), `content` (TEXT), `color` (TEXT), `created_at` (INTEGER), `reminder_at` (INTEGER).
+    *   `notes` table: `id` (PK), `content`, `color`, `pinned`, `reminder_at`, `created_at`.
+    *   `tasks` table: `id` (PK), `title`, `description`, `priority` (low/medium/high), `due_date`, `completed`, `reminder_at`.
 *   **Preferences**: Stored in JSON (`AppData/Roaming/juno/config.json`) via `electron-store`.
     *   `windowX`, `windowY`: Last known screen position.
-    *   `theme`: 'dark' or 'light'.
+    *   `theme`: 'dark', 'light', 'midnight', 'nebula'.
 
 ## 📂 Project Structure
 

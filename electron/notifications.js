@@ -1,5 +1,5 @@
 const { Notification } = require('electron');
-const { getNoteById } = require('./database');
+const { getNoteById, getDueTasks, getDueNotes, clearTaskReminder, clearNoteReminder } = require('./db');
 
 let notificationCheckInterval;
 
@@ -14,9 +14,29 @@ function startNotificationScheduler(mainWindow) {
 }
 
 function checkDueReminders(mainWindow) {
-    // This would query the database for notes with reminder_at <= now
-    // For now, we'll implement the basic structure
-    // The actual implementation will be enhanced when we have the full database system
+    const now = Date.now();
+
+    // Check tasks
+    const dueTasks = getDueTasks(now);
+    dueTasks.forEach(task => {
+        showNotification({
+            id: `task-${task.id}`,
+            content: `Task Due: ${task.title}`,
+            reminderAt: task.reminderAt
+        }, mainWindow);
+        clearTaskReminder(task.id);
+    });
+
+    // Check notes
+    const dueNotes = getDueNotes(now);
+    dueNotes.forEach(note => {
+        showNotification({
+            id: `note-${note.id}`,
+            content: `Note: ${note.content}`,
+            reminderAt: note.reminderAt
+        }, mainWindow);
+        clearNoteReminder(note.id);
+    });
 }
 
 function scheduleNotification(note, mainWindow) {

@@ -1,7 +1,13 @@
-const { app, BrowserWindow, ipcMain, Tray, Menu, globalShortcut, screen, nativeImage } = require('electron');
+const { app, BrowserWindow, ipcMain, Tray, Menu, globalShortcut, screen, nativeImage, shell, dialog } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const Store = require('electron-store');
-const { initDatabase, getAllNotes, addNote, deleteNote, updateNote } = require('./database');
+const {
+    initDatabase, getAllNotes, addNote, updateNote, deleteNote, getNoteById,
+    getAllTasks, addTask, updateTask, deleteTask,
+    getFolders, getFiles, createFolder, addFile, deleteFolder, deleteFile, renameFolder, renameFile, moveFile
+} = require('./db');
+console.log('Database loaded. addTask type:', typeof addTask);
 const { scheduleNotification, cancelNotification, startNotificationScheduler } = require('./notifications');
 
 const store = new Store();
@@ -18,6 +24,15 @@ const EXPANDED_HEIGHT = 600;
 if (process.platform === 'win32') {
     app.setAppUserModelId('com.juno.app');
 }
+
+// Global error handlers
+process.on('uncaughtException', (error) => {
+    console.error('CRITICAL ERROR:', error);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('UNHANDLED REJECTION:', reason);
+});
 
 function createWindow() {
     const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize;
@@ -238,17 +253,74 @@ ipcMain.handle('add-note', async (event, noteData) => {
     if (noteData.reminderAt) {
         scheduleNotification(note, mainWindow);
     }
-
     return note;
+});
+
+ipcMain.handle('update-note', async (event, id, updates) => {
+    return updateNote(id, updates);
 });
 
 ipcMain.handle('delete-note', async (event, id) => {
     return deleteNote(id);
 });
 
-ipcMain.handle('update-note', async (event, id, updates) => {
-    return updateNote(id, updates);
+// Task IPC Handlers
+ipcMain.handle('get-tasks', async () => {
+    return getAllTasks();
 });
+
+ipcMain.handle('add-task', async (event, taskData) => {
+    const task = addTask(taskData);
+
+    // Schedule notification if reminder is set
+    if (taskData.reminderAt) {
+        scheduleNotification({
+            content: `Task: ${task.title}`,
+            reminderAt: task.reminderAt,
+            id: `task-${task.id}`
+        }, mainWindow);
+    }
+
+    return task;
+});
+
+ipcMain.handle('delete-task', async (event, id) => {
+    return deleteTask(id);
+});
+
+ipcMain.handle('update-task', async (event, id, updates) => {
+    const task = updateTask(id, updates);
+
+    // Reschedule if reminder changed
+    if (updates.reminderAt) {
+        scheduleNotification({
+            content: `Task: ${task.title}`,
+            reminderAt: task.reminderAt,
+            id: `task-${task.id}`
+        }, mainWindow);
+    }
+
+    return task;
+});
+
+// File Manager IPC
+ipcMain.handle('get-folders', async (event, parentId) => getFolders(parentId));
+ipcMain.handle('get-files', async (event, folderId) => getFiles(folderId));
+ipcMain.handle('create-folder', async (event, name, parentId) => createFolder(name, parentId));
+ipcMain.handle('add-file', async (event, fileData) => addFile(fileData));
+ipcMain.handle('delete-folder', async (event, id) => deleteFolder(id));
+ipcMain.handle('delete-file', async (event, id) => deleteFile(id));
+ipcMain.handle('rename-folder', async (event, id, newName) => renameFolder(id, newName));
+ipcMain.handle('rename-file', async (event, id, newName) => renameFile(id, newName));
+ipcMain.handle('move-file', async (event, id, targetFolderId) => moveFile(id, targetFolderId));
+
+ipcMain.handle('open-file', async (event, path) => {
+    await shell.openPath(path);
+});
+ipcMain.handle('reveal-file', async (event, path) => {
+    shell.showItemInFolder(path);
+});
+
 
 ipcMain.handle('toggle-expand', async (event, expanded) => {
     isExpanded = expanded;
@@ -521,4 +593,52 @@ ipcMain.handle('snap-to-edge', async () => {
     store.set('windowY', nearestPosition.y);
 
     return { x: nearestPosition.x, y: nearestPosition.y, edge: nearestPosition.name };
+});
+
+ipcMain.handle('select-file', async () => {
+    if (!mainWindow) return [];
+    try {
+        const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+            properties: ['openFile', 'multiSelections']
+        });
+        if (canceled) return [];
+
+        return filePaths.map(filePath => {
+            try {
+                const stats = fs.statSync(filePath);
+                return {
+                    name: path.basename(filePath),
+                    originalPath: filePath,
+                    size: stats.size,
+                    fileType: 'file'
+                };
+            } catch (e) {
+                console.error('Error reading file stats:', e);
+                return null;
+            }
+        }).filter(f => f !== null);
+    } catch (err) {
+        console.error('Error selecting file:', err);
+        return [];
+    }
+});
+
+ipcMain.on('ondragstart', async (event, filePath) => {
+    if (!mainWindow) return;
+    try {
+        const icon = await app.getFileIcon(filePath);
+        event.sender.startDrag({
+            file: filePath,
+            icon: icon
+        });
+    } catch (e) {
+        console.error('Drag error:', e);
+    }
+});
+
+// Update window position
+ipcMain.on('set-window-position', (event, { x, y }) => {
+    if (mainWindow) {
+        mainWindow.setPosition(Math.round(x), Math.round(y));
+    }
 });

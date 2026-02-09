@@ -29,6 +29,28 @@
     -webkit-app-region: no-drag;
   }
 
+  .dark .theme-bg {
+    @apply bg-slate-900;
+  }
+
+  .midnight .theme-bg {
+    @apply bg-slate-900;
+    background-color: #0f172a;
+    /* Solid slate-900 */
+  }
+
+  .nebula .theme-bg {
+    background: linear-gradient(135deg, #2e1065 0%, #4c1d95 100%);
+  }
+
+  html:not(.dark):not(.midnight):not(.nebula) .theme-bg {
+    @apply bg-slate-50;
+  }
+}
+
+@layer components {
+
+  /* Glass Effects */
   .glass-effect {
     @apply backdrop-blur-xl bg-white/10 dark:bg-black/20;
     background: rgba(255, 255, 255, 0.1);
@@ -50,16 +72,17 @@
     -webkit-backdrop-filter: blur(20px);
   }
 
-  .theme-bg {
+  .glass-effect-midnight {
     @apply bg-slate-900;
+    /* No transparency/blur for midnight */
+    background-color: #0f172a;
   }
 
-  .dark .theme-bg {
-    @apply bg-slate-900;
-  }
-
-  html:not(.dark) .theme-bg {
-    @apply bg-slate-50;
+  .glass-effect-nebula {
+    @apply backdrop-blur-xl;
+    background: linear-gradient(135deg, rgba(46, 16, 101, 0.8) 0%, rgba(76, 29, 149, 0.8) 100%);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
   }
 }
 

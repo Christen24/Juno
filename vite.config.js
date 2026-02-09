@@ -36,6 +36,18 @@ export default defineConfig({
             outDir: 'dist-electron'
           }
         }
+      },
+      {
+        // Database script
+        entry: 'electron/db.js',
+        vite: {
+          build: {
+            outDir: 'dist-electron',
+            rollupOptions: {
+              external: ['better-sqlite3', 'electron']
+            }
+          }
+        }
       }
     ]),
     renderer()

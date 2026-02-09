@@ -8,24 +8,25 @@ export function useTheme() {
     }, []);
 
     useEffect(() => {
-        if (theme === 'dark') {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
+        // Remove all theme classes first
+        document.documentElement.classList.remove('dark', 'midnight', 'nebula');
+
+        // Add the current theme class
+        if (theme !== 'light') {
+            document.documentElement.classList.add(theme);
         }
     }, [theme]);
 
     const loadTheme = async () => {
         try {
             const savedTheme = await window.electronAPI.getTheme();
-            setTheme(savedTheme);
+            setTheme(savedTheme || 'dark');
         } catch (error) {
             console.error('Failed to load theme:', error);
         }
     };
 
-    const toggleTheme = async () => {
-        const newTheme = theme === 'dark' ? 'light' : 'dark';
+    const setThemeValue = async (newTheme) => {
         try {
             await window.electronAPI.setTheme(newTheme);
             setTheme(newTheme);
@@ -33,6 +34,8 @@ export function useTheme() {
             console.error('Failed to save theme:', error);
         }
     };
+
+    return { theme, setTheme: setThemeValue };
 
     return { theme, toggleTheme };
 }
