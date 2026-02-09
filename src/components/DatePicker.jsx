@@ -9,13 +9,48 @@ export function DatePicker({ value, onChange, onClose, anchorRef }) {
 
     useEffect(() => {
         if (anchorRef?.current) {
-            const rect = anchorRef.current.getBoundingClientRect();
-            // Check if it fits on the right, else move left?
-            // For now, simple positioning
-            setCoords({
-                top: rect.bottom + 8,
-                left: rect.left
-            });
+            const updatePosition = () => {
+                const rect = anchorRef.current.getBoundingClientRect();
+                const viewportHeight = window.innerHeight;
+                const viewportWidth = window.innerWidth;
+
+                const spaceBelow = viewportHeight - rect.bottom;
+                const spaceAbove = rect.top;
+
+                // Calendar is taller, need more space (approx 350px)
+                const showAbove = spaceBelow < 350 && spaceAbove > spaceBelow;
+
+                // Horizontal: Shift if overflowing right
+                let left = rect.left;
+                const approxWidth = 260;
+                if (left + approxWidth > viewportWidth) {
+                    left = viewportWidth - approxWidth - 10;
+                }
+                if (left < 10) left = 10;
+
+                if (showAbove) {
+                    setCoords({
+                        bottom: viewportHeight - rect.top + 8,
+                        left: left,
+                        top: 'auto'
+                    });
+                } else {
+                    setCoords({
+                        top: rect.bottom + 8,
+                        left: left,
+                        bottom: 'auto'
+                    });
+                }
+            };
+
+            updatePosition();
+            window.addEventListener('resize', updatePosition);
+            window.addEventListener('scroll', updatePosition, true);
+
+            return () => {
+                window.removeEventListener('resize', updatePosition);
+                window.removeEventListener('scroll', updatePosition, true);
+            };
         }
     }, [anchorRef]);
 
@@ -87,11 +122,16 @@ export function DatePicker({ value, onChange, onClose, anchorRef }) {
 
     const content = (
         <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: -10 }}
+            initial={{ opacity: 0, scale: 0.9, y: coords.bottom !== 'auto' ? 10 : -10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: -10 }}
+            exit={{ opacity: 0, scale: 0.9, y: coords.bottom !== 'auto' ? 10 : -10 }}
             className="absolute z-[9999] glass-effect-dark border border-white/10 rounded-lg shadow-2xl p-3 min-w-[240px]"
-            style={anchorRef ? { top: coords.top, left: coords.left, position: 'fixed' } : {}}
+            style={anchorRef ? {
+                top: coords.top,
+                left: coords.left,
+                bottom: coords.bottom,
+                position: 'fixed'
+            } : {}}
         >
             {/* Header */}
             <div className="flex items-center justify-between mb-3">

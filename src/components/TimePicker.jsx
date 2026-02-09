@@ -16,11 +16,48 @@ export function TimePicker({ value, onChange, onClose, anchorRef }) {
 
     useEffect(() => {
         if (anchorRef?.current) {
-            const rect = anchorRef.current.getBoundingClientRect();
-            setCoords({
-                top: rect.bottom + 8, // 8px gap
-                left: rect.left
-            });
+            const updatePosition = () => {
+                const rect = anchorRef.current.getBoundingClientRect();
+                const viewportHeight = window.innerHeight;
+                const viewportWidth = window.innerWidth;
+
+                const spaceBelow = viewportHeight - rect.bottom;
+                const spaceAbove = rect.top;
+
+                // Vertical: Flip if needed
+                const showAbove = spaceBelow < 250 && spaceAbove > spaceBelow;
+
+                // Horizontal: Shift if overflowing right
+                let left = rect.left;
+                const approxWidth = 220;
+                if (left + approxWidth > viewportWidth) {
+                    left = viewportWidth - approxWidth - 10;
+                }
+                if (left < 10) left = 10;
+
+                if (showAbove) {
+                    setCoords({
+                        bottom: viewportHeight - rect.top + 8,
+                        left: left,
+                        top: 'auto'
+                    });
+                } else {
+                    setCoords({
+                        top: rect.bottom + 8,
+                        left: left,
+                        bottom: 'auto'
+                    });
+                }
+            };
+
+            updatePosition();
+            window.addEventListener('resize', updatePosition);
+            window.addEventListener('scroll', updatePosition, true);
+
+            return () => {
+                window.removeEventListener('resize', updatePosition);
+                window.removeEventListener('scroll', updatePosition, true);
+            };
         }
     }, [anchorRef]);
 
@@ -72,11 +109,16 @@ export function TimePicker({ value, onChange, onClose, anchorRef }) {
 
     const content = (
         <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: -10 }}
+            initial={{ opacity: 0, scale: 0.9, y: coords.bottom !== 'auto' ? 10 : -10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: -10 }}
+            exit={{ opacity: 0, scale: 0.9, y: coords.bottom !== 'auto' ? 10 : -10 }}
             className="absolute z-[9999] glass-effect-dark border border-white/10 rounded-lg shadow-2xl p-3 min-w-[180px]"
-            style={anchorRef ? { top: coords.top, left: coords.left, position: 'fixed' } : {}}
+            style={anchorRef ? {
+                top: coords.top,
+                left: coords.left,
+                bottom: coords.bottom,
+                position: 'fixed'
+            } : {}}
         >
             <h3 className="text-white font-semibold mb-3 text-center text-sm">Select Time</h3>
 

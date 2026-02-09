@@ -12,6 +12,7 @@
 ### The Floating Ball
 *   **Always on Top**: Juno appears as a small, unobtrusive floating ball on your screen.
 *   **Move It**: Click and drag the ball to any position on your screen. It will stay there!
+*   **Edge Docking**: Drag the ball to the left or right edge of the screen to "dock" it. It will hide most of itself to stay out of your way. Hover over it to undock.
 *   **Open Notes**: Click the ball (or press `Ctrl+Shift+N`) to expand the full notes widget.
 
 ---
@@ -22,6 +23,21 @@
 *   **Create**: Type your note in the input box and press "Add Note".
 *   **Colors**: Choose from 5 color codes (Blue, Red, Green, Yellow, White) to categorize your notes.
 *   **Edit/Delete**: Hover over any note to see options to Edit (pencil icon) or Delete (trash icon).
+*   **Edit Date/Time**: Click the date/time on any note card to quickly adjust the reminder.
+
+### 📂 File Manager
+Access the **Files** tab to manage your documents alongside your notes.
+*   **Add Files**:
+    *   Click the **"+"** button to select files from your computer.
+    *   **Drag and Drop** files from your Desktop directly into Juno.
+*   **Organize**:
+    *   Create folders using the **Folder** icon.
+    *   **Rename**: Click the 3-dot menu on any file/folder and select "Rename" (type the new name and press Enter).
+    *   **Drag to Folder**: Drag files onto a folder to move (or copy) them into it. Dropping a file onto a folder automatically opens it.
+*   **External Drag & Drop**:
+    *   **Drag Out**: You can drag files **FROM** Juno directly to your Desktop, or into a web browser (e.g., to upload to ChatGPT).
+*   **Navigation**:
+    *   Use the **Back Button** (top-left) or the breadcrumb bar to navigate folders.
 
 ### ⏰ Reminders
 Never forget a task! You can set a one-time reminder for any note.

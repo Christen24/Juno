@@ -1,9 +1,11 @@
 import { motion } from 'framer-motion';
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 export function FileItem({ file, onOpen, onDelete, onRename }) {
     const [showMenu, setShowMenu] = useState(false);
     const [isRenaming, setIsRenaming] = useState(false);
+    const [menuCoords, setMenuCoords] = useState({ top: 0, left: 0 });
     const menuRef = useRef(null);
     const inputRef = useRef(null);
 
@@ -32,6 +34,36 @@ export function FileItem({ file, onOpen, onDelete, onRename }) {
             onRename('file', file.id, finalValue);
         }
         setIsRenaming(false);
+    };
+
+    const handleMenuClick = (e) => {
+        e.stopPropagation();
+        if (!showMenu) {
+            // Scroll if needed
+            const initialRect = e.currentTarget.getBoundingClientRect();
+            const spaceBelow = window.innerHeight - initialRect.bottom;
+            if (spaceBelow < 150) {
+                e.currentTarget.scrollIntoView({ block: 'center', behavior: 'auto' });
+            }
+
+            const rect = e.currentTarget.getBoundingClientRect();
+            let left = rect.right - 128; // Align flush right
+            let top = rect.bottom; // 0px gap
+
+            // Refined positioning: Priority Below
+            const menuHeight = 130;
+            if (top + menuHeight > window.innerHeight) {
+                top = window.innerHeight - menuHeight - 10;
+            }
+
+            if (left + 128 > window.innerWidth) left = window.innerWidth - 138;
+            if (left < 10) left = 10;
+
+            setMenuCoords({ top, left });
+            setShowMenu(true);
+        } else {
+            setShowMenu(false);
+        }
     };
 
     // Helper for file icon based on extension
@@ -119,9 +151,14 @@ export function FileItem({ file, onOpen, onDelete, onRename }) {
                 </button>
             )}
 
-            {/* Dropdown Menu */}
-            {showMenu && (
-                <div ref={menuRef} className="absolute top-6 right-2 z-50 w-32 bg-gray-900 border border-white/10 rounded-lg shadow-xl overflow-hidden glass-effect-dark">
+            {/* Dropdown Menu - Portal */}
+            {showMenu && createPortal(
+                <div
+                    ref={menuRef}
+                    className="fixed z-[9999] w-32 bg-gray-900 border border-white/10 rounded-lg shadow-xl overflow-hidden glass-effect-dark"
+                    style={{ top: menuCoords.top, left: menuCoords.left }}
+                    onClick={(e) => e.stopPropagation()}
+                >
                     <button onClick={() => { onOpen(file.originalPath); setShowMenu(false); }} className="w-full text-left px-3 py-1.5 text-xs text-white hover:bg-white/10">Open</button>
                     <button onClick={(e) => {
                         e.stopPropagation();
@@ -129,7 +166,8 @@ export function FileItem({ file, onOpen, onDelete, onRename }) {
                         setIsRenaming(true);
                     }} className="w-full text-left px-3 py-1.5 text-xs text-white hover:bg-white/10">Rename</button>
                     <button onClick={() => { onDelete('file', file.id); setShowMenu(false); }} className="w-full text-left px-3 py-1.5 text-xs text-red-400 hover:bg-white/10">Delete</button>
-                </div>
+                </div>,
+                document.body
             )}
         </motion.div>
     );
