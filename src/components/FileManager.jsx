@@ -127,11 +127,9 @@ export function FileManager() {
                                     if (e.key === 'Escape') setIsCreating(false);
                                 }}
                                 onBlur={(e) => {
-                                    // Optional: Cancel on blur, or commit? 
-                                    // Committing on blur can be annoying if accidental.
-                                    // Let's commit if valid, else cancel.
-                                    // Actually, user might click outside to cancel.
-                                    // Let's just Cancel on blur to be safe, creating only on Enter.
+                                    if (e.currentTarget.value.trim()) {
+                                        createFolder(e.currentTarget.value.trim());
+                                    }
                                     setIsCreating(false);
                                 }}
                             />
@@ -172,6 +170,11 @@ export function FileManager() {
                         <p>Drop files here</p>
                     </div>
                 )}
+            </div>
+
+            {/* Permanent Drag Hint */}
+            <div className="p-2 text-center border-t border-white/5 bg-white/5 backdrop-blur-sm z-10">
+                <p className="text-[10px] text-white/30 font-medium tracking-wide">Drag and Drop files to add</p>
             </div>
         </div>
     );

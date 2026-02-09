@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 export function Settings({ theme, onToggleTheme, onClose }) {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [showContact, setShowContact] = useState(false);
     const isDark = ['dark', 'midnight', 'nebula'].includes(theme);
 
     const getContainerStyle = (t) => {
@@ -156,6 +157,74 @@ export function Settings({ theme, onToggleTheme, onClose }) {
                         </div>
                     </div>
                 </div>
+            </div>
+
+            {/* Contact Info */}
+            <div className="pt-6 border-t border-white/10">
+                <button
+                    onClick={() => setShowContact(!showContact)}
+                    className={`text-xs font-medium w-full text-center transition-opacity ${isDark ? 'text-white/30 hover:text-white/80' : 'text-slate-400 hover:text-slate-700'
+                        }`}
+                >
+                    {showContact ? 'Close' : 'Developed by Christen Fds'}
+                </button>
+
+                <AnimatePresence>
+                    {showContact && (
+                        <motion.div
+                            initial={{ height: 0, opacity: 0, marginTop: 0 }}
+                            animate={{ height: 'auto', opacity: 1, marginTop: 16 }}
+                            exit={{ height: 0, opacity: 0, marginTop: 0 }}
+                            className="overflow-hidden"
+                        >
+                            <div className="space-y-2">
+                                <a
+                                    href="mailto:chrisfds2407@gmail.com"
+                                    className={`flex items-center gap-3 p-3 rounded-xl border transition-all group ${isDark
+                                        ? 'bg-white/5 border-white/10 hover:bg-white/10'
+                                        : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
+                                        }`}
+                                >
+                                    <div className={`p-2 rounded-lg ${isDark ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-100 text-indigo-600'}`}>
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                        </svg>
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className={`text-xs font-medium ${isDark ? 'text-white/50' : 'text-slate-500'}`}>Email</div>
+                                        <div className={`text-sm ${isDark ? 'text-white' : 'text-slate-800'}`}>chrisfds2407@gmail.com</div>
+                                    </div>
+                                    <svg className={`w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity ${isDark ? 'text-white/50' : 'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                    </svg>
+                                </a>
+
+                                <a
+                                    href="https://www.linkedin.com/in/christenfds/"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={`flex items-center gap-3 p-3 rounded-xl border transition-all group ${isDark
+                                        ? 'bg-white/5 border-white/10 hover:bg-white/10'
+                                        : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
+                                        }`}
+                                >
+                                    <div className={`p-2 rounded-lg ${isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-600'}`}>
+                                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                            <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
+                                        </svg>
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className={`text-xs font-medium ${isDark ? 'text-white/50' : 'text-slate-500'}`}>LinkedIn</div>
+                                        <div className={`text-sm ${isDark ? 'text-white' : 'text-slate-800'}`}>Christen Fds</div>
+                                    </div>
+                                    <svg className={`w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity ${isDark ? 'text-white/50' : 'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                    </svg>
+                                </a>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
         </motion.div>
     );

@@ -1,12 +1,4 @@
-"use strict";
-const Database = require("better-sqlite3");
-const path = require("path");
-const { app } = require("electron");
-let db;
-function initDatabase() {
-  const dbPath = path.join(app.getPath("userData"), "notes.db");
-  db = new Database(dbPath);
-  db.exec(`
+"use strict";const p=require("better-sqlite3"),c=require("path"),{app:u}=require("electron");let d;function l(){const e=c.join(u.getPath("userData"),"notes.db");d=new p(e),d.exec(`
     CREATE TABLE IF NOT EXISTS notes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       content TEXT NOT NULL,
@@ -16,8 +8,7 @@ function initDatabase() {
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL
     )
-  `);
-  db.exec(`
+  `),d.exec(`
     CREATE TABLE IF NOT EXISTS tasks (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       title TEXT NOT NULL,
@@ -29,8 +20,7 @@ function initDatabase() {
       created_at INTEGER,
       updated_at INTEGER
     )
-  `);
-  db.exec(`
+  `),d.exec(`
     CREATE TABLE IF NOT EXISTS folders (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
@@ -39,8 +29,7 @@ function initDatabase() {
       updated_at INTEGER,
       FOREIGN KEY(parent_id) REFERENCES folders(id) ON DELETE CASCADE
     )
-  `);
-  db.exec(`
+  `),d.exec(`
     CREATE TABLE IF NOT EXISTS files (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
@@ -53,319 +42,13 @@ function initDatabase() {
       updated_at INTEGER,
       FOREIGN KEY(folder_id) REFERENCES folders(id) ON DELETE CASCADE
     )
-  `);
-  db.pragma("foreign_keys = ON");
-  console.log("Database initialized at:", dbPath);
-}
-function getAllNotes() {
-  const stmt = db.prepare("SELECT * FROM notes ORDER BY pinned DESC, created_at DESC");
-  const notes = stmt.all();
-  return notes.map((note) => ({
-    id: note.id,
-    content: note.content,
-    color: note.color,
-    pinned: Boolean(note.pinned),
-    reminderAt: note.reminder_at,
-    createdAt: note.created_at,
-    updatedAt: note.updated_at
-  }));
-}
-function getAllTasks() {
-  const stmt = db.prepare("SELECT * FROM tasks ORDER BY completed ASC, due_date ASC, priority DESC");
-  const tasks = stmt.all();
-  return tasks.map((task) => ({
-    id: task.id,
-    title: task.title,
-    description: task.description,
-    priority: task.priority,
-    dueDate: task.due_date,
-    completed: Boolean(task.completed),
-    reminderAt: task.reminder_at,
-    createdAt: task.created_at,
-    updatedAt: task.updated_at
-  }));
-}
-function addNote(noteData) {
-  const now = Date.now();
-  const stmt = db.prepare(`
+  `),d.pragma("foreign_keys = ON"),console.log("Database initialized at:",e)}function T(){return d.prepare("SELECT * FROM notes ORDER BY pinned DESC, created_at DESC").all().map(r=>({id:r.id,content:r.content,color:r.color,pinned:!!r.pinned,reminderAt:r.reminder_at,createdAt:r.created_at,updatedAt:r.updated_at}))}function m(){return d.prepare("SELECT * FROM tasks ORDER BY completed ASC, due_date ASC, priority DESC").all().map(r=>({id:r.id,title:r.title,description:r.description,priority:r.priority,dueDate:r.due_date,completed:!!r.completed,reminderAt:r.reminder_at,createdAt:r.created_at,updatedAt:r.updated_at}))}function R(e){const t=Date.now();return{id:d.prepare(`
     INSERT INTO notes(content, color, pinned, reminder_at, created_at, updated_at)
     VALUES(?, ?, ?, ?, ?, ?)
-            `);
-  const info = stmt.run(
-    noteData.content,
-    noteData.color || "#0ea5e9",
-    noteData.pinned ? 1 : 0,
-    noteData.reminderAt || null,
-    now,
-    now
-  );
-  return {
-    id: info.lastInsertRowid,
-    content: noteData.content,
-    color: noteData.color || "#0ea5e9",
-    pinned: Boolean(noteData.pinned),
-    reminderAt: noteData.reminderAt || null,
-    createdAt: now,
-    updatedAt: now
-  };
-}
-function addTask(taskData) {
-  const now = Date.now();
-  const stmt = db.prepare(`
+            `).run(e.content,e.color||"#0ea5e9",e.pinned?1:0,e.reminderAt||null,t,t).lastInsertRowid,content:e.content,color:e.color||"#0ea5e9",pinned:!!e.pinned,reminderAt:e.reminderAt||null,createdAt:t,updatedAt:t}}function E(e){const t=Date.now();return{id:d.prepare(`
     INSERT INTO tasks(title, description, priority, due_date, completed, reminder_at, created_at, updated_at)
     VALUES(?, ?, ?, ?, ?, ?, ?, ?)
-            `);
-  const info = stmt.run(
-    taskData.title,
-    taskData.description || "",
-    taskData.priority || "medium",
-    taskData.dueDate || null,
-    0,
-    // Not completed by default
-    taskData.reminderAt || null,
-    now,
-    now
-  );
-  return {
-    id: info.lastInsertRowid,
-    title: taskData.title,
-    description: taskData.description || "",
-    priority: taskData.priority || "medium",
-    dueDate: taskData.dueDate || null,
-    completed: false,
-    reminderAt: taskData.reminderAt || null,
-    createdAt: now,
-    updatedAt: now
-  };
-}
-function updateNote(id, updates) {
-  const fields = [];
-  const values = [];
-  if (updates.content !== void 0) {
-    fields.push("content = ?");
-    values.push(updates.content);
-  }
-  if (updates.color !== void 0) {
-    fields.push("color = ?");
-    values.push(updates.color);
-  }
-  if (updates.pinned !== void 0) {
-    fields.push("pinned = ?");
-    values.push(updates.pinned ? 1 : 0);
-  }
-  if (updates.reminderAt !== void 0) {
-    fields.push("reminder_at = ?");
-    values.push(updates.reminderAt);
-  }
-  fields.push("updated_at = ?");
-  values.push(Date.now());
-  values.push(id);
-  const stmt = db.prepare(`UPDATE notes SET ${fields.join(", ")} WHERE id = ? `);
-  stmt.run(...values);
-  const note = db.prepare("SELECT * FROM notes WHERE id = ?").get(id);
-  return {
-    id: note.id,
-    content: note.content,
-    color: note.color,
-    pinned: Boolean(note.pinned),
-    reminderAt: note.reminder_at,
-    createdAt: note.created_at,
-    updatedAt: note.updated_at
-  };
-}
-function updateTask(id, updates) {
-  const fields = [];
-  const values = [];
-  if (updates.title !== void 0) {
-    fields.push("title = ?");
-    values.push(updates.title);
-  }
-  if (updates.description !== void 0) {
-    fields.push("description = ?");
-    values.push(updates.description);
-  }
-  if (updates.priority !== void 0) {
-    fields.push("priority = ?");
-    values.push(updates.priority);
-  }
-  if (updates.dueDate !== void 0) {
-    fields.push("due_date = ?");
-    values.push(updates.dueDate);
-  }
-  if (updates.completed !== void 0) {
-    fields.push("completed = ?");
-    values.push(updates.completed ? 1 : 0);
-  }
-  if (updates.reminderAt !== void 0) {
-    fields.push("reminder_at = ?");
-    values.push(updates.reminderAt);
-  }
-  fields.push("updated_at = ?");
-  values.push(Date.now());
-  values.push(id);
-  const stmt = db.prepare(`UPDATE tasks SET ${fields.join(", ")} WHERE id = ? `);
-  stmt.run(...values);
-  const task = db.prepare("SELECT * FROM tasks WHERE id = ?").get(id);
-  return {
-    id: task.id,
-    title: task.title,
-    description: task.description,
-    priority: task.priority,
-    dueDate: task.due_date,
-    completed: Boolean(task.completed),
-    reminderAt: task.reminder_at,
-    createdAt: task.created_at,
-    updatedAt: task.updated_at
-  };
-}
-function deleteNote(id) {
-  const stmt = db.prepare("DELETE FROM notes WHERE id = ?");
-  stmt.run(id);
-  return { success: true };
-}
-function deleteTask(id) {
-  const stmt = db.prepare("DELETE FROM tasks WHERE id = ?");
-  stmt.run(id);
-  return { success: true };
-}
-function getNoteById(id) {
-  const note = db.prepare("SELECT * FROM notes WHERE id = ?").get(id);
-  if (!note) return null;
-  return {
-    id: note.id,
-    content: note.content,
-    color: note.color,
-    pinned: Boolean(note.pinned),
-    reminderAt: note.reminder_at,
-    createdAt: note.created_at,
-    updatedAt: note.updated_at
-  };
-}
-function getDueTasks(timestamp) {
-  const stmt = db.prepare("SELECT * FROM tasks WHERE reminder_at <= ? AND completed = 0");
-  const tasks = stmt.all(timestamp);
-  return tasks.map((task) => ({
-    id: task.id,
-    title: task.title,
-    description: task.description,
-    priority: task.priority,
-    dueDate: task.due_date,
-    completed: Boolean(task.completed),
-    reminderAt: task.reminder_at,
-    createdAt: task.created_at,
-    updatedAt: task.updated_at
-  }));
-}
-function getDueNotes(timestamp) {
-  const stmt = db.prepare("SELECT * FROM notes WHERE reminder_at <= ?");
-  const notes = stmt.all(timestamp);
-  return notes.map((note) => ({
-    id: note.id,
-    content: note.content,
-    color: note.color,
-    pinned: Boolean(note.pinned),
-    reminderAt: note.reminder_at,
-    createdAt: note.created_at,
-    updatedAt: note.updated_at
-  }));
-}
-function clearTaskReminder(id) {
-  const stmt = db.prepare("UPDATE tasks SET reminder_at = NULL WHERE id = ?");
-  stmt.run(id);
-}
-function clearNoteReminder(id) {
-  const stmt = db.prepare("UPDATE notes SET reminder_at = NULL WHERE id = ?");
-  stmt.run(id);
-}
-module.exports = {
-  initDatabase,
-  getAllNotes,
-  addNote,
-  updateNote,
-  deleteNote,
-  getNoteById,
-  getAllTasks,
-  addTask,
-  updateTask,
-  addTask,
-  updateTask,
-  deleteTask,
-  getDueTasks,
-  getDueNotes,
-  clearTaskReminder,
-  clearTaskReminder,
-  clearNoteReminder,
-  // File Manager
-  getFolders: (parentId) => {
-    const query = parentId ? "SELECT * FROM folders WHERE parent_id = ?" : "SELECT * FROM folders WHERE parent_id IS NULL";
-    const stmt = db.prepare(query);
-    const args = parentId ? [parentId] : [];
-    return stmt.all(...args).map((f) => ({
-      id: f.id,
-      name: f.name,
-      parentId: f.parent_id,
-      createdAt: f.created_at,
-      updatedAt: f.updated_at
-    }));
-  },
-  getFiles: (folderId) => {
-    const query = folderId ? "SELECT * FROM files WHERE folder_id = ?" : "SELECT * FROM files WHERE folder_id IS NULL";
-    const stmt = db.prepare(query);
-    const args = folderId ? [folderId] : [];
-    return stmt.all(...args).map((f) => ({
-      id: f.id,
-      name: f.name,
-      originalPath: f.original_path,
-      storedPath: f.stored_path,
-      fileType: f.file_type,
-      size: f.size,
-      folderId: f.folder_id,
-      createdAt: f.created_at,
-      updatedAt: f.updated_at
-    }));
-  },
-  createFolder: (name, parentId) => {
-    const now = Date.now();
-    const stmt = db.prepare("INSERT INTO folders (name, parent_id, created_at, updated_at) VALUES (?, ?, ?, ?)");
-    const info = stmt.run(name, parentId || null, now, now);
-    return { id: info.lastInsertRowid, name, parentId, createdAt: now, updatedAt: now };
-  },
-  addFile: (fileData) => {
-    const now = Date.now();
-    const stmt = db.prepare(`
+            `).run(e.title,e.description||"",e.priority||"medium",e.dueDate||null,0,e.reminderAt||null,t,t).lastInsertRowid,title:e.title,description:e.description||"",priority:e.priority||"medium",dueDate:e.dueDate||null,completed:!1,reminderAt:e.reminderAt||null,createdAt:t,updatedAt:t}}function _(e,t){const r=[],n=[];t.content!==void 0&&(r.push("content = ?"),n.push(t.content)),t.color!==void 0&&(r.push("color = ?"),n.push(t.color)),t.pinned!==void 0&&(r.push("pinned = ?"),n.push(t.pinned?1:0)),t.reminderAt!==void 0&&(r.push("reminder_at = ?"),n.push(t.reminderAt)),r.push("updated_at = ?"),n.push(Date.now()),n.push(e),d.prepare(`UPDATE notes SET ${r.join(", ")} WHERE id = ? `).run(...n);const o=d.prepare("SELECT * FROM notes WHERE id = ?").get(e);return{id:o.id,content:o.content,color:o.color,pinned:!!o.pinned,reminderAt:o.reminder_at,createdAt:o.created_at,updatedAt:o.updated_at}}function a(e,t){const r=[],n=[];t.title!==void 0&&(r.push("title = ?"),n.push(t.title)),t.description!==void 0&&(r.push("description = ?"),n.push(t.description)),t.priority!==void 0&&(r.push("priority = ?"),n.push(t.priority)),t.dueDate!==void 0&&(r.push("due_date = ?"),n.push(t.dueDate)),t.completed!==void 0&&(r.push("completed = ?"),n.push(t.completed?1:0)),t.reminderAt!==void 0&&(r.push("reminder_at = ?"),n.push(t.reminderAt)),r.push("updated_at = ?"),n.push(Date.now()),n.push(e),d.prepare(`UPDATE tasks SET ${r.join(", ")} WHERE id = ? `).run(...n);const o=d.prepare("SELECT * FROM tasks WHERE id = ?").get(e);return{id:o.id,title:o.title,description:o.description,priority:o.priority,dueDate:o.due_date,completed:!!o.completed,reminderAt:o.reminder_at,createdAt:o.created_at,updatedAt:o.updated_at}}function A(e){return d.prepare("DELETE FROM notes WHERE id = ?").run(e),{success:!0}}function N(e){return d.prepare("DELETE FROM tasks WHERE id = ?").run(e),{success:!0}}function f(e){const t=d.prepare("SELECT * FROM notes WHERE id = ?").get(e);return t?{id:t.id,content:t.content,color:t.color,pinned:!!t.pinned,reminderAt:t.reminder_at,createdAt:t.created_at,updatedAt:t.updated_at}:null}function I(e){return d.prepare("SELECT * FROM tasks WHERE reminder_at <= ? AND completed = 0").all(e).map(n=>({id:n.id,title:n.title,description:n.description,priority:n.priority,dueDate:n.due_date,completed:!!n.completed,reminderAt:n.reminder_at,createdAt:n.created_at,updatedAt:n.updated_at}))}function L(e){return d.prepare("SELECT * FROM notes WHERE reminder_at <= ?").all(e).map(n=>({id:n.id,content:n.content,color:n.color,pinned:!!n.pinned,reminderAt:n.reminder_at,createdAt:n.created_at,updatedAt:n.updated_at}))}function s(e){d.prepare("UPDATE tasks SET reminder_at = NULL WHERE id = ?").run(e)}function S(e){d.prepare("UPDATE notes SET reminder_at = NULL WHERE id = ?").run(e)}module.exports={initDatabase:l,getAllNotes:T,addNote:R,updateNote:_,deleteNote:A,getNoteById:f,getAllTasks:m,addTask:E,updateTask:a,addTask:E,updateTask:a,deleteTask:N,getDueTasks:I,getDueNotes:L,clearTaskReminder:s,clearTaskReminder:s,clearNoteReminder:S,getFolders:e=>{const t=e?"SELECT * FROM folders WHERE parent_id = ?":"SELECT * FROM folders WHERE parent_id IS NULL",r=d.prepare(t),n=e?[e]:[];return r.all(...n).map(i=>({id:i.id,name:i.name,parentId:i.parent_id,createdAt:i.created_at,updatedAt:i.updated_at}))},getFiles:e=>{const t=e?"SELECT * FROM files WHERE folder_id = ?":"SELECT * FROM files WHERE folder_id IS NULL",r=d.prepare(t),n=e?[e]:[];return r.all(...n).map(i=>({id:i.id,name:i.name,originalPath:i.original_path,storedPath:i.stored_path,fileType:i.file_type,size:i.size,folderId:i.folder_id,createdAt:i.created_at,updatedAt:i.updated_at}))},createFolder:(e,t)=>{const r=Date.now();return{id:d.prepare("INSERT INTO folders (name, parent_id, created_at, updated_at) VALUES (?, ?, ?, ?)").run(e,t||null,r,r).lastInsertRowid,name:e,parentId:t,createdAt:r,updatedAt:r}},addFile:e=>{const t=Date.now();return{id:d.prepare(`
             INSERT INTO files (name, original_path, stored_path, file_type, size, folder_id, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `);
-    const info = stmt.run(
-      fileData.name,
-      fileData.originalPath,
-      fileData.storedPath || null,
-      fileData.fileType,
-      fileData.size,
-      fileData.folderId || null,
-      now,
-      now
-    );
-    return { id: info.lastInsertRowid, ...fileData, createdAt: now, updatedAt: now };
-  },
-  deleteFolder: (id) => {
-    db.prepare("DELETE FROM folders WHERE id = ?").run(id);
-    return { success: true };
-  },
-  deleteFile: (id) => {
-    db.prepare("DELETE FROM files WHERE id = ?").run(id);
-    return { success: true };
-  },
-  renameFolder: (id, newName) => {
-    db.prepare("UPDATE folders SET name = ?, updated_at = ? WHERE id = ?").run(newName, Date.now(), id);
-    return { success: true };
-  },
-  renameFile: (id, newName) => {
-    db.prepare("UPDATE files SET name = ?, updated_at = ? WHERE id = ?").run(newName, Date.now(), id);
-    return { success: true };
-  },
-  moveFile: (id, targetFolderId) => {
-    db.prepare("UPDATE files SET folder_id = ?, updated_at = ? WHERE id = ?").run(targetFolderId || null, Date.now(), id);
-    return { success: true };
-  }
-};
+        `).run(e.name,e.originalPath,e.storedPath||null,e.fileType,e.size,e.folderId||null,t,t).lastInsertRowid,...e,createdAt:t,updatedAt:t}},deleteFolder:e=>(d.prepare("DELETE FROM folders WHERE id = ?").run(e),{success:!0}),deleteFile:e=>(d.prepare("DELETE FROM files WHERE id = ?").run(e),{success:!0}),renameFolder:(e,t)=>(d.prepare("UPDATE folders SET name = ?, updated_at = ? WHERE id = ?").run(t,Date.now(),e),{success:!0}),renameFile:(e,t)=>(d.prepare("UPDATE files SET name = ?, updated_at = ? WHERE id = ?").run(t,Date.now(),e),{success:!0}),moveFile:(e,t)=>(d.prepare("UPDATE files SET folder_id = ?, updated_at = ? WHERE id = ?").run(t||null,Date.now(),e),{success:!0})};
