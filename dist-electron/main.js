@@ -1,1 +1,515 @@
-"use strict";const{app:m,BrowserWindow:N,ipcMain:i,Tray:C,Menu:I,globalShortcut:H,screen:P,nativeImage:R,shell:W,dialog:_}=require("electron"),k=require("path"),O=require("fs"),V=require("electron-store"),{initDatabase:j,getAllNotes:L,addNote:U,updateNote:$,deleteNote:B,getNoteById:de,getAllTasks:J,addTask:q,updateTask:Q,deleteTask:G,getFolders:Z,getFiles:K,createFolder:ee,addFile:te,deleteFolder:ne,deleteFile:oe,renameFolder:ie,renameFile:se,moveFile:ae}=require("./db");console.log("Database loaded. addTask type:",typeof q);const{scheduleNotification:A,cancelNotification:he,startNotificationScheduler:re}=require("./notifications"),f=new V;let e,z=null,M=!1;const p=80,D=400,E=600;process.platform==="win32"&&m.setAppUserModelId("com.juno.app");process.on("uncaughtException",n=>{console.error("CRITICAL ERROR:",n)});process.on("unhandledRejection",(n,t)=>{console.error("UNHANDLED REJECTION:",n)});function F(){const{width:n,height:t}=P.getPrimaryDisplay().workAreaSize,o=n-p-20,h=t-p-20;f.get("windowX",o),f.get("windowY",h),e=new N({width:p,height:p,icon:k.join(__dirname,"../ball-icon.png"),frame:!1,transparent:!0,backgroundColor:"#00000000",alwaysOnTop:!0,skipTaskbar:!0,resizable:!1,movable:!1,minimizable:!1,maximizable:!1,hasShadow:!1,webPreferences:{preload:k.join(__dirname,"preload.js"),nodeIntegration:!1,contextIsolation:!0}}),process.env.NODE_ENV==="development"||!m.isPackaged?e.loadURL("http://localhost:5173").catch(s=>{console.error("Failed to load URL:",s)}):e.loadFile(k.join(__dirname,"../dist/index.html")).catch(s=>{console.error("Failed to load file:",s)}),e.show(),e.setVisibleOnAllWorkspaces(!0,{visibleOnFullScreen:!0}),e.on("minimize",s=>{s.preventDefault()}),e.on("moved",()=>{const[s,a]=e.getPosition();f.set("windowX",s),f.set("windowY",a)}),e.setAlwaysOnTop(!0,"screen-saver"),e.webContents.on("did-finish-load",()=>{console.log("Window loaded successfully!")}),e.webContents.on("did-fail-load",(s,a,w)=>{console.error("Failed to load:",a,w)}),e.on("moved",()=>{if(M&&e){const[s,a]=e.getPosition(),[w,b]=e.getSize(),{width:l,height:g}=P.getPrimaryDisplay().workAreaSize,r=-(w/2),d=0,u=l-w/2,x=g-b/2;let c=s,v=a,y=!1;s<r&&(c=r,y=!0),s>u&&(c=u,y=!0),a<d&&(v=d,y=!0),a>x&&(v=x,y=!0),y&&e.setPosition(Math.round(c),Math.round(v))}})}function le(){const n=k.join(__dirname,"../ball-icon.png"),t=R.createFromPath(n).resize({width:32,height:32});z=new C(t);const o=I.buildFromTemplate([{label:"Show/Hide",click:()=>{e&&(e.isVisible()?e.hide():(e.show(),e.focus()))}},{label:"Toggle Expand",click:()=>{e&&e.isVisible()&&e.webContents.send("toggle-from-tray")}},{type:"separator"},{label:"Quit",click:()=>{m.quit()}}]);z.setToolTip("Juno"),z.setContextMenu(o),z.on("double-click",()=>{e&&(e.isVisible()?e.hide():(e.show(),e.focus()))})}function ce(){H.register("CommandOrControl+Shift+N",()=>{e&&(e.isVisible()?e.hide():(e.show(),e.focus()))})||console.log("Registration failed")}m.whenReady().then(()=>{j(),le(),F(),ce(),re(e),m.on("activate",()=>{N.getAllWindows().length===0&&F()})});m.on("window-all-closed",()=>{process.platform!=="darwin"&&m.quit()});m.on("will-quit",()=>{H.unregisterAll()});i.handle("get-notes",async()=>L());i.handle("add-note",async(n,t)=>{const o=U(t);return t.reminderAt&&A(o,e),o});i.handle("update-note",async(n,t,o)=>$(t,o));i.handle("delete-note",async(n,t)=>B(t));i.handle("get-tasks",async()=>J());i.handle("add-task",async(n,t)=>{const o=q(t);return t.reminderAt&&A({content:`Task: ${o.title}`,reminderAt:o.reminderAt,id:`task-${o.id}`},e),o});i.handle("delete-task",async(n,t)=>G(t));i.handle("update-task",async(n,t,o)=>{const h=Q(t,o);return o.reminderAt&&A({content:`Task: ${h.title}`,reminderAt:h.reminderAt,id:`task-${h.id}`},e),h});i.handle("get-folders",async(n,t)=>Z(t));i.handle("get-files",async(n,t)=>K(t));i.handle("create-folder",async(n,t,o)=>ee(t,o));i.handle("add-file",async(n,t)=>te(t));i.handle("delete-folder",async(n,t)=>ne(t));i.handle("delete-file",async(n,t)=>oe(t));i.handle("rename-folder",async(n,t,o)=>ie(t,o));i.handle("rename-file",async(n,t,o)=>se(t,o));i.handle("move-file",async(n,t,o)=>ae(t,o));i.handle("open-file",async(n,t)=>{await W.openPath(t)});i.handle("reveal-file",async(n,t)=>{W.showItemInFolder(t)});i.handle("toggle-expand",async(n,t)=>{M=t;const[o,h]=e.getPosition(),{width:s,height:a}=P.getPrimaryDisplay().workAreaSize;if(t){e.setResizable(!0),e.setMovable(!0),e.setMinimumSize(300,400),e.setMaximumSize(800,1e3),e.setSize(D,E,!0);const l=-200,g=s-D/2,r=0,d=a-E/2,u=Math.max(l,Math.min(g,o)),x=Math.max(r,Math.min(d,h));e.setPosition(Math.round(u),Math.round(x))}else e.setResizable(!1),e.setMovable(!1),e.setMinimumSize(p,p),e.setMaximumSize(p,p),e.setSize(p,p,!0),setTimeout(async()=>{if(!M&&e){const[l,g]=e.getPosition(),[r,d]=e.getSize(),u=l+r/2,x=g+d/2,c=20,v=[{x:c,y:c},{x:s-r-c,y:c},{x:c,y:a-d-c},{x:s-r-c,y:a-d-c},{x:c,y:(a-d)/2},{x:s-r-c,y:(a-d)/2},{x:(s-r)/2,y:c},{x:(s-r)/2,y:a-d-c}];let y=v[0],T=1/0;for(const S of v){const X={x:S.x+r/2,y:S.y+d/2},Y=Math.sqrt(Math.pow(u-X.x,2)+Math.pow(x-X.y,2));Y<T&&(T=Y,y=S)}e.setPosition(Math.round(y.x),Math.round(y.y)),f.set("windowX",y.x),f.set("windowY",y.y)}},100);const[w,b]=e.getPosition();return f.set("windowX",w),f.set("windowY",b),{expanded:t}});i.handle("start-drag",async()=>!0);i.handle("get-window-position",async()=>{if(e){const[n,t]=e.getPosition();return{x:n,y:t}}return{x:0,y:0}});i.handle("get-theme",async()=>f.get("theme","dark"));i.handle("set-theme",async(n,t)=>(f.set("theme",t),t));i.on("close-app",()=>{m.quit()});i.on("hide-window",()=>{e&&e.hide()});i.on("quit-app",()=>{m.quit()});i.handle("show-context-menu",async()=>{if(!e)return;I.buildFromTemplate([{label:"Hide",click:()=>{e&&e.hide()}},{type:"separator"},{label:"Quit",click:()=>{m.quit()}}]).popup({window:e})});i.on("set-ignore-mouse-events",(n,t)=>{e&&(t?e.setIgnoreMouseEvents(!0,{forward:!0}):e.setIgnoreMouseEvents(!1))});i.handle("set-window-position",async(n,t,o)=>{if(e&&typeof t=="number"&&typeof o=="number"&&!isNaN(t)&&!isNaN(o)){const{width:h,height:s}=P.getPrimaryDisplay().workAreaSize,[a,w]=e.getSize(),b=-(a/2),l=-(w/2),g=h-a/2,r=s-w/2,d=Math.max(b,Math.min(g,Math.round(t))),u=Math.max(l,Math.min(r,Math.round(o)));M?e.setPosition(d,u):e.setBounds({x:d,y:u,width:80,height:80})}});i.handle("finalize-drag",async()=>e&&!M?(e.setSize(80,80),e.setResizable(!1),e.setMovable(!1),!0):!1);i.handle("snap-to-edge",async()=>{if(!e||M)return;const{width:n,height:t}=P.getPrimaryDisplay().workAreaSize,[o,h]=e.getPosition(),[s,a]=e.getSize(),w=o+s/2,b=h+a/2,l=20,g=[{x:l,y:l,name:"top-left"},{x:n-s-l,y:l,name:"top-right"},{x:l,y:t-a-l,name:"bottom-left"},{x:n-s-l,y:t-a-l,name:"bottom-right"},{x:l,y:(t-a)/2,name:"left-middle"},{x:n-s-l,y:(t-a)/2,name:"right-middle"},{x:(n-s)/2,y:l,name:"top-middle"},{x:(n-s)/2,y:t-a-l,name:"bottom-middle"}];let r=g[0],d=1/0;for(const u of g){const x={x:u.x+s/2,y:u.y+a/2},c=Math.sqrt(Math.pow(w-x.x,2)+Math.pow(b-x.y,2));c<d&&(d=c,r=u)}return e.setPosition(Math.round(r.x),Math.round(r.y)),f.set("windowX",r.x),f.set("windowY",r.y),{x:r.x,y:r.y,edge:r.name}});i.handle("select-file",async()=>{if(!e)return[];try{const{canceled:n,filePaths:t}=await _.showOpenDialog(e,{properties:["openFile","multiSelections"]});return n?[]:t.map(o=>{try{const h=O.statSync(o);return{name:k.basename(o),originalPath:o,size:h.size,fileType:"file"}}catch(h){return console.error("Error reading file stats:",h),null}}).filter(o=>o!==null)}catch(n){return console.error("Error selecting file:",n),[]}});i.on("ondragstart",async(n,t)=>{if(e)try{const o=await m.getFileIcon(t);n.sender.startDrag({file:t,icon:o})}catch(o){console.error("Drag error:",o)}});i.on("set-window-position",(n,{x:t,y:o})=>{e&&e.setPosition(Math.round(t),Math.round(o))});
+"use strict";
+const { app, BrowserWindow, ipcMain, Tray, Menu, globalShortcut, screen, nativeImage, shell, dialog } = require("electron");
+const path = require("path");
+const fs = require("fs");
+const Store = require("electron-store");
+const {
+  initDatabase,
+  getAllNotes,
+  addNote,
+  updateNote,
+  deleteNote,
+  getNoteById,
+  getAllTasks,
+  addTask,
+  updateTask,
+  deleteTask,
+  getFolders,
+  getFiles,
+  createFolder,
+  addFile,
+  deleteFolder,
+  deleteFile,
+  renameFolder,
+  renameFile,
+  moveFile
+} = require("./db");
+console.log("Database loaded. addTask type:", typeof addTask);
+const { scheduleNotification, cancelNotification, startNotificationScheduler } = require("./notifications");
+const store = new Store();
+let mainWindow;
+let tray = null;
+let isExpanded = false;
+const COLLAPSED_SIZE = 80;
+const EXPANDED_WIDTH = 400;
+const EXPANDED_HEIGHT = 600;
+if (process.platform === "win32") {
+  app.setAppUserModelId("com.juno.app");
+}
+process.on("uncaughtException", (error) => {
+  console.error("CRITICAL ERROR:", error);
+});
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("UNHANDLED REJECTION:", reason);
+});
+function createWindow() {
+  const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize;
+  const defaultX = screenWidth - COLLAPSED_SIZE - 20;
+  const defaultY = screenHeight - COLLAPSED_SIZE - 20;
+  store.get("windowX", defaultX);
+  store.get("windowY", defaultY);
+  mainWindow = new BrowserWindow({
+    width: COLLAPSED_SIZE,
+    height: COLLAPSED_SIZE,
+    icon: path.join(__dirname, "../ball-icon.png"),
+    // Set app icon matches tray
+    frame: false,
+    transparent: true,
+    backgroundColor: "#00000000",
+    // Explicitly fully transparent
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    resizable: false,
+    movable: false,
+    minimizable: false,
+    maximizable: false,
+    hasShadow: false,
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+      nodeIntegration: false,
+      contextIsolation: true
+    }
+  });
+  if (process.env.NODE_ENV === "development" || !app.isPackaged) {
+    mainWindow.loadURL("http://localhost:5173").catch((err) => {
+      console.error("Failed to load URL:", err);
+    });
+  } else {
+    mainWindow.loadFile(path.join(__dirname, "../dist/index.html")).catch((err) => {
+      console.error("Failed to load file:", err);
+    });
+  }
+  mainWindow.show();
+  mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  mainWindow.on("minimize", (event) => {
+    event.preventDefault();
+  });
+  mainWindow.on("moved", () => {
+    const [x, y] = mainWindow.getPosition();
+    store.set("windowX", x);
+    store.set("windowY", y);
+  });
+  mainWindow.setAlwaysOnTop(true, "screen-saver");
+  mainWindow.webContents.on("did-finish-load", () => {
+    console.log("Window loaded successfully!");
+  });
+  mainWindow.webContents.on("did-fail-load", (event, errorCode, errorDescription) => {
+    console.error("Failed to load:", errorCode, errorDescription);
+  });
+  mainWindow.on("moved", () => {
+    if (isExpanded && mainWindow) {
+      const [currentX, currentY] = mainWindow.getPosition();
+      const [windowWidth, windowHeight] = mainWindow.getSize();
+      const { width: screenWidth2, height: screenHeight2 } = screen.getPrimaryDisplay().workAreaSize;
+      const minX = -(windowWidth / 2);
+      const minY = 0;
+      const maxX = screenWidth2 - windowWidth / 2;
+      const maxY = screenHeight2 - windowHeight / 2;
+      let newX = currentX;
+      let newY = currentY;
+      let needsCorrection = false;
+      if (currentX < minX) {
+        newX = minX;
+        needsCorrection = true;
+      }
+      if (currentX > maxX) {
+        newX = maxX;
+        needsCorrection = true;
+      }
+      if (currentY < minY) {
+        newY = minY;
+        needsCorrection = true;
+      }
+      if (currentY > maxY) {
+        newY = maxY;
+        needsCorrection = true;
+      }
+      if (needsCorrection) {
+        mainWindow.setPosition(Math.round(newX), Math.round(newY));
+      }
+    }
+  });
+}
+function createTray() {
+  const iconPath = path.join(__dirname, "../ball-icon.png");
+  const icon = nativeImage.createFromPath(iconPath).resize({ width: 32, height: 32 });
+  tray = new Tray(icon);
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: "Show/Hide",
+      click: () => {
+        if (mainWindow) {
+          if (mainWindow.isVisible()) {
+            mainWindow.hide();
+          } else {
+            mainWindow.show();
+            mainWindow.focus();
+          }
+        }
+      }
+    },
+    {
+      label: "Toggle Expand",
+      click: () => {
+        if (mainWindow && mainWindow.isVisible()) {
+          mainWindow.webContents.send("toggle-from-tray");
+        }
+      }
+    },
+    { type: "separator" },
+    {
+      label: "Quit",
+      click: () => {
+        app.quit();
+      }
+    }
+  ]);
+  tray.setToolTip("Juno");
+  tray.setContextMenu(contextMenu);
+  tray.on("double-click", () => {
+    if (mainWindow) {
+      if (mainWindow.isVisible()) {
+        mainWindow.hide();
+      } else {
+        mainWindow.show();
+        mainWindow.focus();
+      }
+    }
+  });
+}
+function registerHotkeys() {
+  const ret = globalShortcut.register("CommandOrControl+Shift+N", () => {
+    if (mainWindow) {
+      if (mainWindow.isVisible()) {
+        mainWindow.hide();
+      } else {
+        mainWindow.show();
+        mainWindow.focus();
+      }
+    }
+  });
+  if (!ret) {
+    console.log("Registration failed");
+  }
+}
+app.whenReady().then(() => {
+  initDatabase();
+  createTray();
+  createWindow();
+  registerHotkeys();
+  startNotificationScheduler(mainWindow);
+  app.on("activate", () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    }
+  });
+});
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
+    app.quit();
+  }
+});
+app.on("will-quit", () => {
+  globalShortcut.unregisterAll();
+});
+ipcMain.handle("get-notes", async () => {
+  return getAllNotes();
+});
+ipcMain.handle("add-note", async (event, noteData) => {
+  const note = addNote(noteData);
+  if (noteData.reminderAt) {
+    scheduleNotification(note, mainWindow);
+  }
+  return note;
+});
+ipcMain.handle("update-note", async (event, id, updates) => {
+  return updateNote(id, updates);
+});
+ipcMain.handle("delete-note", async (event, id) => {
+  return deleteNote(id);
+});
+ipcMain.handle("get-tasks", async () => {
+  return getAllTasks();
+});
+ipcMain.handle("add-task", async (event, taskData) => {
+  const task = addTask(taskData);
+  if (taskData.reminderAt) {
+    scheduleNotification({
+      content: `Task: ${task.title}`,
+      reminderAt: task.reminderAt,
+      id: `task-${task.id}`
+    }, mainWindow);
+  }
+  return task;
+});
+ipcMain.handle("delete-task", async (event, id) => {
+  return deleteTask(id);
+});
+ipcMain.handle("update-task", async (event, id, updates) => {
+  const task = updateTask(id, updates);
+  if (updates.reminderAt) {
+    scheduleNotification({
+      content: `Task: ${task.title}`,
+      reminderAt: task.reminderAt,
+      id: `task-${task.id}`
+    }, mainWindow);
+  }
+  return task;
+});
+ipcMain.handle("get-folders", async (event, parentId) => getFolders(parentId));
+ipcMain.handle("get-files", async (event, folderId) => getFiles(folderId));
+ipcMain.handle("create-folder", async (event, name, parentId) => createFolder(name, parentId));
+ipcMain.handle("add-file", async (event, fileData) => addFile(fileData));
+ipcMain.handle("delete-folder", async (event, id) => deleteFolder(id));
+ipcMain.handle("delete-file", async (event, id) => deleteFile(id));
+ipcMain.handle("rename-folder", async (event, id, newName) => renameFolder(id, newName));
+ipcMain.handle("rename-file", async (event, id, newName) => renameFile(id, newName));
+ipcMain.handle("move-file", async (event, id, targetFolderId) => moveFile(id, targetFolderId));
+ipcMain.handle("open-file", async (event, path2) => {
+  await shell.openPath(path2);
+});
+ipcMain.handle("reveal-file", async (event, path2) => {
+  shell.showItemInFolder(path2);
+});
+ipcMain.handle("toggle-expand", async (event, expanded) => {
+  isExpanded = expanded;
+  const [currentX, currentY] = mainWindow.getPosition();
+  const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize;
+  if (expanded) {
+    mainWindow.setResizable(true);
+    mainWindow.setMovable(true);
+    mainWindow.setMinimumSize(300, 400);
+    mainWindow.setMaximumSize(800, 1e3);
+    mainWindow.setSize(EXPANDED_WIDTH, EXPANDED_HEIGHT, true);
+    const minVisibleX = -200;
+    const maxVisibleX = screenWidth - EXPANDED_WIDTH / 2;
+    const minVisibleY = 0;
+    const maxVisibleY = screenHeight - EXPANDED_HEIGHT / 2;
+    const newX = Math.max(minVisibleX, Math.min(maxVisibleX, currentX));
+    const newY = Math.max(minVisibleY, Math.min(maxVisibleY, currentY));
+    mainWindow.setPosition(Math.round(newX), Math.round(newY));
+  } else {
+    mainWindow.setResizable(false);
+    mainWindow.setMovable(false);
+    mainWindow.setMinimumSize(COLLAPSED_SIZE, COLLAPSED_SIZE);
+    mainWindow.setMaximumSize(COLLAPSED_SIZE, COLLAPSED_SIZE);
+    mainWindow.setSize(COLLAPSED_SIZE, COLLAPSED_SIZE, true);
+    setTimeout(async () => {
+      if (!isExpanded && mainWindow) {
+        const [currentX2, currentY2] = mainWindow.getPosition();
+        const [windowWidth, windowHeight] = mainWindow.getSize();
+        const centerX = currentX2 + windowWidth / 2;
+        const centerY = currentY2 + windowHeight / 2;
+        const padding = 20;
+        const snapPositions = [
+          // Corners
+          { x: padding, y: padding },
+          { x: screenWidth - windowWidth - padding, y: padding },
+          { x: padding, y: screenHeight - windowHeight - padding },
+          { x: screenWidth - windowWidth - padding, y: screenHeight - windowHeight - padding },
+          // Edges
+          { x: padding, y: (screenHeight - windowHeight) / 2 },
+          { x: screenWidth - windowWidth - padding, y: (screenHeight - windowHeight) / 2 },
+          { x: (screenWidth - windowWidth) / 2, y: padding },
+          { x: (screenWidth - windowWidth) / 2, y: screenHeight - windowHeight - padding }
+        ];
+        let nearestPosition = snapPositions[0];
+        let minDistance = Infinity;
+        for (const pos of snapPositions) {
+          const posCenter = {
+            x: pos.x + windowWidth / 2,
+            y: pos.y + windowHeight / 2
+          };
+          const distance = Math.sqrt(
+            Math.pow(centerX - posCenter.x, 2) + Math.pow(centerY - posCenter.y, 2)
+          );
+          if (distance < minDistance) {
+            minDistance = distance;
+            nearestPosition = pos;
+          }
+        }
+        mainWindow.setPosition(Math.round(nearestPosition.x), Math.round(nearestPosition.y));
+        store.set("windowX", nearestPosition.x);
+        store.set("windowY", nearestPosition.y);
+      }
+    }, 100);
+  }
+  const [x, y] = mainWindow.getPosition();
+  store.set("windowX", x);
+  store.set("windowY", y);
+  return { expanded };
+});
+ipcMain.handle("start-drag", async () => {
+  return true;
+});
+ipcMain.handle("get-window-position", async () => {
+  if (mainWindow) {
+    const [x, y] = mainWindow.getPosition();
+    return { x, y };
+  }
+  return { x: 0, y: 0 };
+});
+ipcMain.handle("get-theme", async () => {
+  return store.get("theme", "dark");
+});
+ipcMain.handle("set-theme", async (event, theme) => {
+  store.set("theme", theme);
+  return theme;
+});
+ipcMain.on("close-app", () => {
+  app.quit();
+});
+ipcMain.on("hide-window", () => {
+  if (mainWindow) {
+    mainWindow.hide();
+  }
+});
+ipcMain.on("quit-app", () => {
+  app.quit();
+});
+ipcMain.handle("show-context-menu", async () => {
+  if (!mainWindow) return;
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: "Hide",
+      click: () => {
+        if (mainWindow) {
+          mainWindow.hide();
+        }
+      }
+    },
+    { type: "separator" },
+    {
+      label: "Quit",
+      click: () => {
+        app.quit();
+      }
+    }
+  ]);
+  contextMenu.popup({ window: mainWindow });
+});
+ipcMain.on("set-ignore-mouse-events", (event, ignore) => {
+  if (mainWindow) {
+    if (ignore) {
+      mainWindow.setIgnoreMouseEvents(true, { forward: true });
+    } else {
+      mainWindow.setIgnoreMouseEvents(false);
+    }
+  }
+});
+ipcMain.handle("set-window-position", async (event, x, y) => {
+  if (mainWindow && typeof x === "number" && typeof y === "number" && !isNaN(x) && !isNaN(y)) {
+    const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize;
+    const [windowWidth, windowHeight] = mainWindow.getSize();
+    const minX = -(windowWidth / 2);
+    const minY = -(windowHeight / 2);
+    const maxX = screenWidth - windowWidth / 2;
+    const maxY = screenHeight - windowHeight / 2;
+    const boundedX = Math.max(minX, Math.min(maxX, Math.round(x)));
+    const boundedY = Math.max(minY, Math.min(maxY, Math.round(y)));
+    if (!isExpanded) {
+      mainWindow.setBounds({
+        x: boundedX,
+        y: boundedY,
+        width: 80,
+        height: 80
+      });
+    } else {
+      mainWindow.setPosition(boundedX, boundedY);
+    }
+  }
+});
+ipcMain.handle("finalize-drag", async () => {
+  if (mainWindow && !isExpanded) {
+    mainWindow.setSize(80, 80);
+    mainWindow.setResizable(false);
+    mainWindow.setMovable(false);
+    return true;
+  }
+  return false;
+});
+ipcMain.handle("snap-to-edge", async () => {
+  if (!mainWindow || isExpanded) {
+    return;
+  }
+  const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize;
+  const [currentX, currentY] = mainWindow.getPosition();
+  const [windowWidth, windowHeight] = mainWindow.getSize();
+  const centerX = currentX + windowWidth / 2;
+  const centerY = currentY + windowHeight / 2;
+  const padding = 20;
+  const snapPositions = [
+    // Corners
+    { x: padding, y: padding, name: "top-left" },
+    { x: screenWidth - windowWidth - padding, y: padding, name: "top-right" },
+    { x: padding, y: screenHeight - windowHeight - padding, name: "bottom-left" },
+    { x: screenWidth - windowWidth - padding, y: screenHeight - windowHeight - padding, name: "bottom-right" },
+    // Edges (middle of each side)
+    { x: padding, y: (screenHeight - windowHeight) / 2, name: "left-middle" },
+    { x: screenWidth - windowWidth - padding, y: (screenHeight - windowHeight) / 2, name: "right-middle" },
+    { x: (screenWidth - windowWidth) / 2, y: padding, name: "top-middle" },
+    { x: (screenWidth - windowWidth) / 2, y: screenHeight - windowHeight - padding, name: "bottom-middle" }
+  ];
+  let nearestPosition = snapPositions[0];
+  let minDistance = Infinity;
+  for (const pos of snapPositions) {
+    const posCenter = {
+      x: pos.x + windowWidth / 2,
+      y: pos.y + windowHeight / 2
+    };
+    const distance = Math.sqrt(
+      Math.pow(centerX - posCenter.x, 2) + Math.pow(centerY - posCenter.y, 2)
+    );
+    if (distance < minDistance) {
+      minDistance = distance;
+      nearestPosition = pos;
+    }
+  }
+  mainWindow.setPosition(Math.round(nearestPosition.x), Math.round(nearestPosition.y));
+  store.set("windowX", nearestPosition.x);
+  store.set("windowY", nearestPosition.y);
+  return { x: nearestPosition.x, y: nearestPosition.y, edge: nearestPosition.name };
+});
+ipcMain.handle("select-file", async () => {
+  if (!mainWindow) return [];
+  try {
+    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+      properties: ["openFile", "multiSelections"]
+    });
+    if (canceled) return [];
+    return filePaths.map((filePath) => {
+      try {
+        const stats = fs.statSync(filePath);
+        return {
+          name: path.basename(filePath),
+          originalPath: filePath,
+          size: stats.size,
+          fileType: "file"
+        };
+      } catch (e) {
+        console.error("Error reading file stats:", e);
+        return null;
+      }
+    }).filter((f) => f !== null);
+  } catch (err) {
+    console.error("Error selecting file:", err);
+    return [];
+  }
+});
+ipcMain.on("ondragstart", async (event, filePath) => {
+  if (!mainWindow) return;
+  try {
+    const icon = await app.getFileIcon(filePath);
+    event.sender.startDrag({
+      file: filePath,
+      icon
+    });
+  } catch (e) {
+    console.error("Drag error:", e);
+  }
+});
+ipcMain.on("set-window-position", (event, { x, y }) => {
+  if (mainWindow) {
+    mainWindow.setPosition(Math.round(x), Math.round(y));
+  }
+});

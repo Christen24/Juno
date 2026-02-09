@@ -1,10 +1,12 @@
 import { motion } from 'framer-motion';
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 export function FolderItem({ folder, onNavigate, onDelete, onRename, onMoveItem, onAddFile }) {
     const [showMenu, setShowMenu] = useState(false);
     const [isDragOver, setIsDragOver] = useState(false);
     const [isRenaming, setIsRenaming] = useState(false);
+    const [menuCoords, setMenuCoords] = useState({ top: 0, left: 0 });
     const menuRef = useRef(null);
     const inputRef = useRef(null);
 
@@ -66,6 +68,36 @@ export function FolderItem({ folder, onNavigate, onDelete, onRename, onMoveItem,
         setIsRenaming(false);
     };
 
+    const handleMenuClick = (e) => {
+        e.stopPropagation();
+        if (!showMenu) {
+            // Scroll if needed
+            const initialRect = e.currentTarget.getBoundingClientRect();
+            const spaceBelow = window.innerHeight - initialRect.bottom;
+            if (spaceBelow < 150) {
+                e.currentTarget.scrollIntoView({ block: 'center', behavior: 'auto' });
+            }
+
+            const rect = e.currentTarget.getBoundingClientRect();
+            let left = rect.right - 128; // Align flush right (w-32 = 128px)
+            let top = rect.bottom; // 0px gap
+
+            // Refined positioning: Force Below (Clamp)
+            const menuHeight = 130;
+            if (top + menuHeight > window.innerHeight) {
+                top = window.innerHeight - menuHeight - 10;
+            }
+
+            if (left + 128 > window.innerWidth) left = window.innerWidth - 138;
+            if (left < 10) left = 10;
+
+            setMenuCoords({ top, left });
+            setShowMenu(true);
+        } else {
+            setShowMenu(false);
+        }
+    };
+
     return (
         <motion.div
             layout
@@ -114,9 +146,14 @@ export function FolderItem({ folder, onNavigate, onDelete, onRename, onMoveItem,
                 </button>
             )}
 
-            {/* Dropdown Menu */}
-            {showMenu && (
-                <div ref={menuRef} className="absolute top-6 right-2 z-50 w-32 bg-gray-900 border border-white/10 rounded-lg shadow-xl overflow-hidden glass-effect-dark">
+            {/* Dropdown Menu - Portal */}
+            {showMenu && createPortal(
+                <div
+                    ref={menuRef}
+                    className="fixed z-[9999] w-32 bg-gray-900 border border-white/10 rounded-lg shadow-xl overflow-hidden glass-effect-dark"
+                    style={{ top: menuCoords.top, left: menuCoords.left }}
+                    onClick={(e) => e.stopPropagation()}
+                >
                     <button onClick={() => { onNavigate(folder.id, folder.name); setShowMenu(false); }} className="w-full text-left px-3 py-1.5 text-xs text-white hover:bg-white/10">Open</button>
                     <button onClick={(e) => {
                         e.stopPropagation();
@@ -124,7 +161,8 @@ export function FolderItem({ folder, onNavigate, onDelete, onRename, onMoveItem,
                         setIsRenaming(true);
                     }} className="w-full text-left px-3 py-1.5 text-xs text-white hover:bg-white/10">Rename</button>
                     <button onClick={() => { onDelete('folder', folder.id); setShowMenu(false); }} className="w-full text-left px-3 py-1.5 text-xs text-red-400 hover:bg-white/10">Delete</button>
-                </div>
+                </div>,
+                document.body
             )}
         </motion.div>
     );

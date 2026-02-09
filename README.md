@@ -12,6 +12,7 @@
 ### The Floating Ball
 *   **Always on Top**: Juno appears as a small, unobtrusive floating ball on your screen.
 *   **Move It**: Click and drag the ball to any position on your screen. It will stay there!
+*   **Edge Docking**: Drag the ball to the left or right edge of the screen to "dock" it. It will hide most of itself to stay out of your way. Hover over it to undock.
 *   **Open Notes**: Click the ball (or press `Ctrl+Shift+N`) to expand the full notes widget.
 
 ---
