@@ -1,9 +1,23 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { createPortal } from 'react-dom';
 
-export function DatePicker({ value, onChange, onClose }) {
+export function DatePicker({ value, onChange, onClose, anchorRef }) {
     const [currentDate, setCurrentDate] = useState(value ? new Date(value) : new Date());
     const [selectedDate, setSelectedDate] = useState(value || '');
+    const [coords, setCoords] = useState({ top: 0, left: 0 });
+
+    useEffect(() => {
+        if (anchorRef?.current) {
+            const rect = anchorRef.current.getBoundingClientRect();
+            // Check if it fits on the right, else move left?
+            // For now, simple positioning
+            setCoords({
+                top: rect.bottom + 8,
+                left: rect.left
+            });
+        }
+    }, [anchorRef]);
 
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
@@ -26,6 +40,8 @@ export function DatePicker({ value, onChange, onClose }) {
         const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         setSelectedDate(dateStr);
         onChange(dateStr);
+        // Do not close immediately to allow seeing selection?
+        // Or keep existing behavior
         setTimeout(onClose, 200);
     };
 
@@ -69,12 +85,13 @@ export function DatePicker({ value, onChange, onClose }) {
         return days;
     };
 
-    return (
+    const content = (
         <motion.div
             initial={{ opacity: 0, scale: 0.9, y: -10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: -10 }}
-            className="absolute z-50 glass-effect-dark border border-white/10 rounded-lg shadow-2xl p-3 min-w-[240px]"
+            className="absolute z-[9999] glass-effect-dark border border-white/10 rounded-lg shadow-2xl p-3 min-w-[240px]"
+            style={anchorRef ? { top: coords.top, left: coords.left, position: 'fixed' } : {}}
         >
             {/* Header */}
             <div className="flex items-center justify-between mb-3">
@@ -122,4 +139,10 @@ export function DatePicker({ value, onChange, onClose }) {
             </div>
         </motion.div>
     );
+
+    if (anchorRef) {
+        return createPortal(content, document.body);
+    }
+
+    return content;
 }

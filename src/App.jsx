@@ -9,7 +9,7 @@ import './styles/index.css';
 function App() {
     const [isExpanded, setIsExpanded] = useState(false);
     const { notes, addNote, deleteNote, updateNote } = useNotes();
-    const { theme, toggleTheme } = useTheme();
+    const { theme, setTheme } = useTheme();
 
     // Handle expand/collapse
     const handleToggleExpand = async (expanded) => {
@@ -85,7 +85,7 @@ function App() {
                         onUpdateNote={handleUpdateNote}
                         onCollapse={handleCollapse}
                         theme={theme}
-                        onToggleTheme={toggleTheme}
+                        onToggleTheme={setTheme}
                     />
                 )}
             </AnimatePresence>
