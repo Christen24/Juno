@@ -1,6 +1,6 @@
 {
   "name": "juno",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Juno - A lightweight floating quick-notes desktop app",
   "main": "dist-electron/main.js",
   "author": {
