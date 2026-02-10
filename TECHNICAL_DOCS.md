@@ -79,3 +79,24 @@ Since the window is frameless, we implement a custom drag handler (`useDragging.
 
 *   **Email**: chrisfds2407@gmail.com
 *   **GitHub**: [Christen24/Juno](https://github.com/Christen24/Juno.git)
+
+## 🚀 Releasing on GitHub
+
+To share your app with others, follow these steps:
+
+1.  **Build the App**:
+    *   Windows: `npm run build:win` -> Generates `Juno Setup 1.0.0.exe` in `release/1.0.0/`.
+    *   Mac: `npm run build:mac` -> Generates `Juno-1.0.0.dmg` in `release/1.0.0/`.
+
+2.  **Create a Release**:
+    *   Go to your GitHub repository -> Click **Releases** (on the right) -> **Draft a new release**.
+    *   **Tag version**: `v1.0.0` (ensure it matches `package.json`).
+    *   **Release title**: `Juno v1.0.0 - Initial Release`.
+    *   **Description**: List the new features (e.g., "Initial release with Quick Notes, File Manager, and Windows support").
+
+3.  **Upload Assets**:
+    *   Drag and drop the `.exe` (and `.dmg` if applicable) files from your local `release/` folder into the "Attach binaries..." box.
+    *   Do **NOT** upload the `win-unpacked` folder, just the installer file.
+
+4.  **Publish**:
+    *   Click **Publish release**. Users can now download the app directly from GitHub!
