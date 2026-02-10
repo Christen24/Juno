@@ -20,6 +20,11 @@ const COLLAPSED_SIZE = 80; // Match ball size exactly
 const EXPANDED_WIDTH = 400;
 const EXPANDED_HEIGHT = 600;
 
+// Hide dock icon on macOS (Tray-only app)
+if (process.platform === 'darwin') {
+    app.dock.hide();
+}
+
 // Set App User Model ID for Windows notifications
 if (process.platform === 'win32') {
     app.setAppUserModelId('com.juno.app');
@@ -116,13 +121,16 @@ function createWindow() {
         if (isExpanded && mainWindow) {
             const [currentX, currentY] = mainWindow.getPosition();
             const [windowWidth, windowHeight] = mainWindow.getSize();
-            const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize;
+
+            // Get display nearest to current position
+            const currentDisplay = screen.getDisplayNearestPoint({ x: currentX, y: currentY });
+            const { x: screenX, y: screenY, width: screenWidth, height: screenHeight } = currentDisplay.workArea;
 
             // Allow up to half the window to go off-screen, but not more
-            const minX = -(windowWidth / 2);
-            const minY = 0;
-            const maxX = screenWidth - (windowWidth / 2);
-            const maxY = screenHeight - (windowHeight / 2);
+            const minX = screenX - (windowWidth / 2);
+            const minY = screenY;
+            const maxX = screenX + screenWidth - (windowWidth / 2);
+            const maxY = screenY + screenHeight - (windowHeight / 2);
 
             // Check if window is out of bounds and correct it
             let newX = currentX;
@@ -496,19 +504,20 @@ ipcMain.on('set-ignore-mouse-events', (event, ignore) => {
 
 ipcMain.handle('set-window-position', async (event, x, y) => {
     if (mainWindow && typeof x === 'number' && typeof y === 'number' && !isNaN(x) && !isNaN(y)) {
-        // Get screen bounds
-        const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize;
+        // Get display nearest to current position
+        const currentDisplay = screen.getDisplayNearestPoint({ x, y });
+        const { x: screenX, y: screenY, width: screenWidth, height: screenHeight } = currentDisplay.workArea;
         const [windowWidth, windowHeight] = mainWindow.getSize();
 
         // Allow up to half the window to go off-screen, but not more
-        const minX = -(windowWidth / 2);  // Can go left by half width
-        const minY = -(windowHeight / 2); // Can go top by half height
-        const maxX = screenWidth - (windowWidth / 2);  // Can go right by half width
-        const maxY = screenHeight - (windowHeight / 2);  // Can go down by half height
+        const minX = screenX - (windowWidth / 2);
+        const minY = screenY - (windowHeight / 2);
+        const maxX = screenX + screenWidth - (windowWidth / 2);
+        const maxY = screenY + screenHeight - (windowHeight / 2);
 
         // Clamp position to bounds
-        const boundedX = Math.max(minX, Math.min(maxX, Math.round(x)));
-        const boundedY = Math.max(minY, Math.min(maxY, Math.round(y)));
+        const boundedX = Math.round(Math.max(minX, Math.min(maxX, x)));
+        const boundedY = Math.round(Math.max(minY, Math.min(maxY, y)));
 
         // atomically set position AND size to prevent drift
         if (!isExpanded) {
@@ -540,29 +549,30 @@ ipcMain.handle('snap-to-edge', async () => {
         return; // Only snap when collapsed
     }
 
-    const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize;
     const [currentX, currentY] = mainWindow.getPosition();
     const [windowWidth, windowHeight] = mainWindow.getSize();
 
-    // Calculate center of the window
+    // Get display for current position
     const centerX = currentX + windowWidth / 2;
     const centerY = currentY + windowHeight / 2;
+    const currentDisplay = screen.getDisplayNearestPoint({ x: centerX, y: centerY });
+    const { x: screenX, y: screenY, width: screenWidth, height: screenHeight } = currentDisplay.workArea;
 
     const padding = 20; // Padding from screen edges
 
     // Define all possible snap positions (corners and edges)
     const snapPositions = [
         // Corners
-        { x: padding, y: padding, name: 'top-left' },
-        { x: screenWidth - windowWidth - padding, y: padding, name: 'top-right' },
-        { x: padding, y: screenHeight - windowHeight - padding, name: 'bottom-left' },
-        { x: screenWidth - windowWidth - padding, y: screenHeight - windowHeight - padding, name: 'bottom-right' },
+        { x: screenX + padding, y: screenY + padding, name: 'top-left' },
+        { x: screenX + screenWidth - windowWidth - padding, y: screenY + padding, name: 'top-right' },
+        { x: screenX + padding, y: screenY + screenHeight - windowHeight - padding, name: 'bottom-left' },
+        { x: screenX + screenWidth - windowWidth - padding, y: screenY + screenHeight - windowHeight - padding, name: 'bottom-right' },
 
         // Edges (middle of each side)
-        { x: padding, y: (screenHeight - windowHeight) / 2, name: 'left-middle' },
-        { x: screenWidth - windowWidth - padding, y: (screenHeight - windowHeight) / 2, name: 'right-middle' },
-        { x: (screenWidth - windowWidth) / 2, y: padding, name: 'top-middle' },
-        { x: (screenWidth - windowWidth) / 2, y: screenHeight - windowHeight - padding, name: 'bottom-middle' },
+        { x: screenX + padding, y: screenY + (screenHeight - windowHeight) / 2, name: 'left-middle' },
+        { x: screenX + screenWidth - windowWidth - padding, y: screenY + (screenHeight - windowHeight) / 2, name: 'right-middle' },
+        { x: screenX + (screenWidth - windowWidth) / 2, y: screenY + padding, name: 'top-middle' },
+        { x: screenX + (screenWidth - windowWidth) / 2, y: screenY + screenHeight - windowHeight - padding, name: 'bottom-middle' },
     ];
 
     // Find the nearest snap position

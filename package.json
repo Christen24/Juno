@@ -17,6 +17,7 @@
     "dev": "vite",
     "build": "vite build && electron-builder",
     "build:win": "vite build && electron-builder --win",
+    "build:mac": "vite build && electron-builder --mac",
     "preview": "vite preview",
     "test": "jest",
     "lint": "eslint src/",
@@ -59,12 +60,32 @@
       "dist/**/*",
       "dist-electron/**/*",
       "package.json",
-      "electron/preload.js",
-      "ball-icon.png"
+      "ball-icon.png",
+      "!**/*.map"
     ],
+    "compression": "maximum",
     "win": {
       "target": "nsis",
       "icon": "ball-icon.png"
+    },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.productivity",
+      "icon": "ball-icon.png"
+    },
+    "dmg": {
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
     },
     "nsis": {
       "oneClick": false,
