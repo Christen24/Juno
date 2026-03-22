@@ -60,4 +60,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.on('toggle-from-tray', subscription);
         return () => ipcRenderer.removeListener('toggle-from-tray', subscription);
     },
+    onTasksUpdated: (callback) => {
+        const subscription = () => callback();
+        ipcRenderer.on('tasks-updated', subscription);
+        return () => ipcRenderer.removeListener('tasks-updated', subscription);
+    },
 });

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Tray, Menu, globalShortcut, screen, nativeImage, shell, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, Tray, Menu, globalShortcut, screen, nativeImage, shell, dialog, powerMonitor } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const Store = require('electron-store');
@@ -8,12 +8,32 @@ const {
     getFolders, getFiles, createFolder, addFile, deleteFolder, deleteFile, renameFolder, renameFile, moveFile
 } = require('./db');
 console.log('Database loaded. addTask type:', typeof addTask);
-const { scheduleNotification, cancelNotification, startNotificationScheduler } = require('./notifications');
+const { scheduleNotification, cancelNotification, startNotificationScheduler, checkDueReminders } = require('./notifications');
 
 const store = new Store();
+const os = require('os');
+
 let mainWindow;
 let tray = null;
 let isExpanded = false;
+
+// Detect auto-start: check --hidden arg OR if system just booted (< 3 min uptime)
+const systemUptime = os.uptime();
+const launchedHidden = process.argv.includes('--hidden') || systemUptime < 180;
+console.log(`Launch mode: argv=${process.argv.join(' ')}, uptime=${systemUptime}s, hidden=${launchedHidden}`);
+
+// Prevent multiple instances — focus existing window instead
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+    app.quit();
+} else {
+    app.on('second-instance', () => {
+        if (mainWindow) {
+            mainWindow.show();
+            mainWindow.focus();
+        }
+    });
+}
 
 // Window dimensions
 const COLLAPSED_SIZE = 80; // Match ball size exactly
@@ -86,8 +106,10 @@ function createWindow() {
         });
     }
 
-    // Ensure window is shown
-    mainWindow.show();
+    // Show window unless launched hidden (auto-start)
+    if (!launchedHidden) {
+        mainWindow.show();
+    }
 
     // Make window draggable
     mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
@@ -232,6 +254,24 @@ app.whenReady().then(() => {
     registerHotkeys();
     startNotificationScheduler(mainWindow);
 
+    // Re-check notifications when PC wakes from sleep/hibernate
+    powerMonitor.on('resume', () => {
+        console.log('System resumed from sleep — re-checking notifications');
+        checkDueReminders(mainWindow);
+    });
+
+    // Also re-check when screen is unlocked (common Windows pattern)
+    powerMonitor.on('unlock-screen', () => {
+        console.log('Screen unlocked — re-checking notifications');
+        checkDueReminders(mainWindow);
+    });
+
+    // Auto-launch on system startup so notifications always work
+    app.setLoginItemSettings({
+        openAtLogin: true,
+        args: ['--hidden'] // Start hidden in tray on auto-launch
+    });
+
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) {
             createWindow();
@@ -239,10 +279,9 @@ app.whenReady().then(() => {
     });
 });
 
-app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') {
-        app.quit();
-    }
+app.on('window-all-closed', (e) => {
+    // Don't quit — keep running in tray for notifications
+    e.preventDefault();
 });
 
 app.on('will-quit', () => {

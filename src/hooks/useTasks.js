@@ -19,6 +19,16 @@ export function useTasks() {
         loadTasks();
     }, [loadTasks]);
 
+    // Auto-refresh when scheduler reschedules recurring tasks
+    useEffect(() => {
+        if (window.electronAPI?.onTasksUpdated) {
+            const cleanup = window.electronAPI.onTasksUpdated(() => {
+                loadTasks();
+            });
+            return cleanup;
+        }
+    }, [loadTasks]);
+
     const addTask = async (taskData) => {
         try {
             const newTask = await window.electronAPI.addTask(taskData);

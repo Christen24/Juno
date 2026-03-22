@@ -31,10 +31,18 @@ function initDatabase() {
       due_date INTEGER,
       completed INTEGER DEFAULT 0,
       reminder_at INTEGER,
+      is_recurring INTEGER DEFAULT 0,
       created_at INTEGER,
       updated_at INTEGER
     )
   `);
+
+    // Migration: Add is_recurring if it doesn't exist
+    try {
+        db.exec('ALTER TABLE tasks ADD COLUMN is_recurring INTEGER DEFAULT 0');
+    } catch (e) {
+        // Column likely exists, ignore
+    }
 
     // Create folders table
     db.exec(`
@@ -97,6 +105,7 @@ function getAllTasks() {
         dueDate: task.due_date,
         completed: Boolean(task.completed),
         reminderAt: task.reminder_at,
+        isRecurring: Boolean(task.is_recurring),
         createdAt: task.created_at,
         updatedAt: task.updated_at,
     }));
@@ -132,8 +141,8 @@ function addNote(noteData) {
 function addTask(taskData) {
     const now = Date.now();
     const stmt = db.prepare(`
-    INSERT INTO tasks(title, description, priority, due_date, completed, reminder_at, created_at, updated_at)
-    VALUES(?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO tasks(title, description, priority, due_date, completed, reminder_at, is_recurring, created_at, updated_at)
+    VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
             `);
 
     const info = stmt.run(
@@ -143,6 +152,7 @@ function addTask(taskData) {
         taskData.dueDate || null,
         0, // Not completed by default
         taskData.reminderAt || null,
+        taskData.isRecurring ? 1 : 0,
         now,
         now
     );
@@ -155,6 +165,7 @@ function addTask(taskData) {
         dueDate: taskData.dueDate || null,
         completed: false,
         reminderAt: taskData.reminderAt || null,
+        isRecurring: Boolean(taskData.isRecurring),
         createdAt: now,
         updatedAt: now,
     };
@@ -229,6 +240,10 @@ function updateTask(id, updates) {
         fields.push('reminder_at = ?');
         values.push(updates.reminderAt);
     }
+    if (updates.isRecurring !== undefined) {
+        fields.push('is_recurring = ?');
+        values.push(updates.isRecurring ? 1 : 0);
+    }
 
     fields.push('updated_at = ?');
     values.push(Date.now());
@@ -247,6 +262,7 @@ function updateTask(id, updates) {
         dueDate: task.due_date,
         completed: Boolean(task.completed),
         reminderAt: task.reminder_at,
+        isRecurring: Boolean(task.is_recurring),
         createdAt: task.created_at,
         updatedAt: task.updated_at,
     };
@@ -290,6 +306,7 @@ function getDueTasks(timestamp) {
         dueDate: task.due_date,
         completed: Boolean(task.completed),
         reminderAt: task.reminder_at,
+        isRecurring: Boolean(task.is_recurring),
         createdAt: task.created_at,
         updatedAt: task.updated_at,
     }));

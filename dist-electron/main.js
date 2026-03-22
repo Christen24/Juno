@@ -1,1 +1,549 @@
-"use strict";const{app:w,BrowserWindow:F,ipcMain:i,Tray:C,Menu:I,globalShortcut:H,screen:A,nativeImage:R,shell:W,dialog:_}=require("electron"),z=require("path"),O=require("fs"),V=require("electron-store"),{initDatabase:j,getAllNotes:L,addNote:U,updateNote:$,deleteNote:B,getNoteById:de,getAllTasks:J,addTask:q,updateTask:Q,deleteTask:G,getFolders:Z,getFiles:K,createFolder:ee,addFile:te,deleteFolder:ne,deleteFile:oe,renameFolder:ie,renameFile:se,moveFile:re}=require("./db");console.log("Database loaded. addTask type:",typeof q);const{scheduleNotification:Y,cancelNotification:he,startNotificationScheduler:ae}=require("./notifications"),g=new V;let e,S=null,X=!1;const v=80,N=400,T=600;process.platform==="darwin"&&w.dock.hide();process.platform==="win32"&&w.setAppUserModelId("com.juno.app");process.on("uncaughtException",o=>{console.error("CRITICAL ERROR:",o)});process.on("unhandledRejection",(o,t)=>{console.error("UNHANDLED REJECTION:",o)});function E(){const{width:o,height:t}=A.getPrimaryDisplay().workAreaSize,n=o-v-20,a=t-v-20;g.get("windowX",n),g.get("windowY",a),e=new F({width:v,height:v,icon:z.join(__dirname,"../ball-icon.png"),frame:!1,transparent:!0,backgroundColor:"#00000000",alwaysOnTop:!0,skipTaskbar:!0,resizable:!1,movable:!1,minimizable:!1,maximizable:!1,hasShadow:!1,webPreferences:{preload:z.join(__dirname,"preload.js"),nodeIntegration:!1,contextIsolation:!0}}),process.env.NODE_ENV==="development"||!w.isPackaged?e.loadURL("http://localhost:5173").catch(s=>{console.error("Failed to load URL:",s)}):e.loadFile(z.join(__dirname,"../dist/index.html")).catch(s=>{console.error("Failed to load file:",s)}),e.show(),e.setVisibleOnAllWorkspaces(!0,{visibleOnFullScreen:!0}),e.on("minimize",s=>{s.preventDefault()}),e.on("moved",()=>{const[s,l]=e.getPosition();g.set("windowX",s),g.set("windowY",l)}),e.setAlwaysOnTop(!0,"screen-saver"),e.webContents.on("did-finish-load",()=>{console.log("Window loaded successfully!")}),e.webContents.on("did-fail-load",(s,l,x)=>{console.error("Failed to load:",l,x)}),e.on("moved",()=>{if(X&&e){const[s,l]=e.getPosition(),[x,m]=e.getSize(),h=A.getDisplayNearestPoint({x:s,y:l}),{x:f,y:d,width:r,height:b}=h.workArea,u=f-x/2,c=d,y=f+r-x/2,p=d+b-m/2;let M=s,P=l,k=!1;s<u&&(M=u,k=!0),s>y&&(M=y,k=!0),l<c&&(P=c,k=!0),l>p&&(P=p,k=!0),k&&e.setPosition(Math.round(M),Math.round(P))}})}function le(){const o=z.join(__dirname,"../ball-icon.png"),t=R.createFromPath(o).resize({width:32,height:32});S=new C(t);const n=I.buildFromTemplate([{label:"Show/Hide",click:()=>{e&&(e.isVisible()?e.hide():(e.show(),e.focus()))}},{label:"Toggle Expand",click:()=>{e&&e.isVisible()&&e.webContents.send("toggle-from-tray")}},{type:"separator"},{label:"Quit",click:()=>{w.quit()}}]);S.setToolTip("Juno"),S.setContextMenu(n),S.on("double-click",()=>{e&&(e.isVisible()?e.hide():(e.show(),e.focus()))})}function ce(){H.register("CommandOrControl+Shift+N",()=>{e&&(e.isVisible()?e.hide():(e.show(),e.focus()))})||console.log("Registration failed")}w.whenReady().then(()=>{j(),le(),E(),ce(),ae(e),w.on("activate",()=>{F.getAllWindows().length===0&&E()})});w.on("window-all-closed",()=>{process.platform!=="darwin"&&w.quit()});w.on("will-quit",()=>{H.unregisterAll()});i.handle("get-notes",async()=>L());i.handle("add-note",async(o,t)=>{const n=U(t);return t.reminderAt&&Y(n,e),n});i.handle("update-note",async(o,t,n)=>$(t,n));i.handle("delete-note",async(o,t)=>B(t));i.handle("get-tasks",async()=>J());i.handle("add-task",async(o,t)=>{const n=q(t);return t.reminderAt&&Y({content:`Task: ${n.title}`,reminderAt:n.reminderAt,id:`task-${n.id}`},e),n});i.handle("delete-task",async(o,t)=>G(t));i.handle("update-task",async(o,t,n)=>{const a=Q(t,n);return n.reminderAt&&Y({content:`Task: ${a.title}`,reminderAt:a.reminderAt,id:`task-${a.id}`},e),a});i.handle("get-folders",async(o,t)=>Z(t));i.handle("get-files",async(o,t)=>K(t));i.handle("create-folder",async(o,t,n)=>ee(t,n));i.handle("add-file",async(o,t)=>te(t));i.handle("delete-folder",async(o,t)=>ne(t));i.handle("delete-file",async(o,t)=>oe(t));i.handle("rename-folder",async(o,t,n)=>ie(t,n));i.handle("rename-file",async(o,t,n)=>se(t,n));i.handle("move-file",async(o,t,n)=>re(t,n));i.handle("open-file",async(o,t)=>{await W.openPath(t)});i.handle("reveal-file",async(o,t)=>{W.showItemInFolder(t)});i.handle("toggle-expand",async(o,t)=>{X=t;const[n,a]=e.getPosition(),{width:s,height:l}=A.getPrimaryDisplay().workAreaSize;if(t){e.setResizable(!0),e.setMovable(!0),e.setMinimumSize(300,400),e.setMaximumSize(800,1e3),e.setSize(N,T,!0);const h=-200,f=s-N/2,d=0,r=l-T/2,b=Math.max(h,Math.min(f,n)),u=Math.max(d,Math.min(r,a));e.setPosition(Math.round(b),Math.round(u))}else e.setResizable(!1),e.setMovable(!1),e.setMinimumSize(v,v),e.setMaximumSize(v,v),e.setSize(v,v,!0),setTimeout(async()=>{if(!X&&e){const[h,f]=e.getPosition(),[d,r]=e.getSize(),b=h+d/2,u=f+r/2,c=20,y=[{x:c,y:c},{x:s-d-c,y:c},{x:c,y:l-r-c},{x:s-d-c,y:l-r-c},{x:c,y:(l-r)/2},{x:s-d-c,y:(l-r)/2},{x:(s-d)/2,y:c},{x:(s-d)/2,y:l-r-c}];let p=y[0],M=1/0;for(const P of y){const k={x:P.x+d/2,y:P.y+r/2},D=Math.sqrt(Math.pow(b-k.x,2)+Math.pow(u-k.y,2));D<M&&(M=D,p=P)}e.setPosition(Math.round(p.x),Math.round(p.y)),g.set("windowX",p.x),g.set("windowY",p.y)}},100);const[x,m]=e.getPosition();return g.set("windowX",x),g.set("windowY",m),{expanded:t}});i.handle("start-drag",async()=>!0);i.handle("get-window-position",async()=>{if(e){const[o,t]=e.getPosition();return{x:o,y:t}}return{x:0,y:0}});i.handle("get-theme",async()=>g.get("theme","dark"));i.handle("set-theme",async(o,t)=>(g.set("theme",t),t));i.on("close-app",()=>{w.quit()});i.on("hide-window",()=>{e&&e.hide()});i.on("quit-app",()=>{w.quit()});i.handle("show-context-menu",async()=>{if(!e)return;I.buildFromTemplate([{label:"Hide",click:()=>{e&&e.hide()}},{type:"separator"},{label:"Quit",click:()=>{w.quit()}}]).popup({window:e})});i.on("set-ignore-mouse-events",(o,t)=>{e&&(t?e.setIgnoreMouseEvents(!0,{forward:!0}):e.setIgnoreMouseEvents(!1))});i.handle("set-window-position",async(o,t,n)=>{if(e&&typeof t=="number"&&typeof n=="number"&&!isNaN(t)&&!isNaN(n)){const a=A.getDisplayNearestPoint({x:t,y:n}),{x:s,y:l,width:x,height:m}=a.workArea,[h,f]=e.getSize(),d=s-h/2,r=l-f/2,b=s+x-h/2,u=l+m-f/2,c=Math.round(Math.max(d,Math.min(b,t))),y=Math.round(Math.max(r,Math.min(u,n)));X?e.setPosition(c,y):e.setBounds({x:c,y,width:80,height:80})}});i.handle("finalize-drag",async()=>e&&!X?(e.setSize(80,80),e.setResizable(!1),e.setMovable(!1),!0):!1);i.handle("snap-to-edge",async()=>{if(!e||X)return;const[o,t]=e.getPosition(),[n,a]=e.getSize(),s=o+n/2,l=t+a/2,x=A.getDisplayNearestPoint({x:s,y:l}),{x:m,y:h,width:f,height:d}=x.workArea,r=20,b=[{x:m+r,y:h+r,name:"top-left"},{x:m+f-n-r,y:h+r,name:"top-right"},{x:m+r,y:h+d-a-r,name:"bottom-left"},{x:m+f-n-r,y:h+d-a-r,name:"bottom-right"},{x:m+r,y:h+(d-a)/2,name:"left-middle"},{x:m+f-n-r,y:h+(d-a)/2,name:"right-middle"},{x:m+(f-n)/2,y:h+r,name:"top-middle"},{x:m+(f-n)/2,y:h+d-a-r,name:"bottom-middle"}];let u=b[0],c=1/0;for(const y of b){const p={x:y.x+n/2,y:y.y+a/2},M=Math.sqrt(Math.pow(s-p.x,2)+Math.pow(l-p.y,2));M<c&&(c=M,u=y)}return e.setPosition(Math.round(u.x),Math.round(u.y)),g.set("windowX",u.x),g.set("windowY",u.y),{x:u.x,y:u.y,edge:u.name}});i.handle("select-file",async()=>{if(!e)return[];try{const{canceled:o,filePaths:t}=await _.showOpenDialog(e,{properties:["openFile","multiSelections"]});return o?[]:t.map(n=>{try{const a=O.statSync(n);return{name:z.basename(n),originalPath:n,size:a.size,fileType:"file"}}catch(a){return console.error("Error reading file stats:",a),null}}).filter(n=>n!==null)}catch(o){return console.error("Error selecting file:",o),[]}});i.on("ondragstart",async(o,t)=>{if(e)try{const n=await w.getFileIcon(t);o.sender.startDrag({file:t,icon:n})}catch(n){console.error("Drag error:",n)}});i.on("set-window-position",(o,{x:t,y:n})=>{e&&e.setPosition(Math.round(t),Math.round(n))});
+"use strict";
+const { app, BrowserWindow, ipcMain, Tray, Menu, globalShortcut, screen, nativeImage, shell, dialog, powerMonitor } = require("electron");
+const path = require("path");
+const fs = require("fs");
+const Store = require("electron-store");
+const {
+  initDatabase,
+  getAllNotes,
+  addNote,
+  updateNote,
+  deleteNote,
+  getNoteById,
+  getAllTasks,
+  addTask,
+  updateTask,
+  deleteTask,
+  getFolders,
+  getFiles,
+  createFolder,
+  addFile,
+  deleteFolder,
+  deleteFile,
+  renameFolder,
+  renameFile,
+  moveFile
+} = require("./db");
+console.log("Database loaded. addTask type:", typeof addTask);
+const { scheduleNotification, cancelNotification, startNotificationScheduler, checkDueReminders } = require("./notifications");
+const store = new Store();
+const os = require("os");
+let mainWindow;
+let tray = null;
+let isExpanded = false;
+const systemUptime = os.uptime();
+const launchedHidden = process.argv.includes("--hidden") || systemUptime < 180;
+console.log(`Launch mode: argv=${process.argv.join(" ")}, uptime=${systemUptime}s, hidden=${launchedHidden}`);
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on("second-instance", () => {
+    if (mainWindow) {
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  });
+}
+const COLLAPSED_SIZE = 80;
+const EXPANDED_WIDTH = 400;
+const EXPANDED_HEIGHT = 600;
+if (process.platform === "darwin") {
+  app.dock.hide();
+}
+if (process.platform === "win32") {
+  app.setAppUserModelId("com.juno.app");
+}
+process.on("uncaughtException", (error) => {
+  console.error("CRITICAL ERROR:", error);
+});
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("UNHANDLED REJECTION:", reason);
+});
+function createWindow() {
+  const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize;
+  const defaultX = screenWidth - COLLAPSED_SIZE - 20;
+  const defaultY = screenHeight - COLLAPSED_SIZE - 20;
+  store.get("windowX", defaultX);
+  store.get("windowY", defaultY);
+  mainWindow = new BrowserWindow({
+    width: COLLAPSED_SIZE,
+    height: COLLAPSED_SIZE,
+    icon: path.join(__dirname, "../ball-icon.png"),
+    // Set app icon matches tray
+    frame: false,
+    transparent: true,
+    backgroundColor: "#00000000",
+    // Explicitly fully transparent
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    resizable: false,
+    movable: false,
+    minimizable: false,
+    maximizable: false,
+    hasShadow: false,
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+      nodeIntegration: false,
+      contextIsolation: true
+    }
+  });
+  if (process.env.NODE_ENV === "development" || !app.isPackaged) {
+    mainWindow.loadURL("http://localhost:5173").catch((err) => {
+      console.error("Failed to load URL:", err);
+    });
+  } else {
+    mainWindow.loadFile(path.join(__dirname, "../dist/index.html")).catch((err) => {
+      console.error("Failed to load file:", err);
+    });
+  }
+  if (!launchedHidden) {
+    mainWindow.show();
+  }
+  mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  mainWindow.on("minimize", (event) => {
+    event.preventDefault();
+  });
+  mainWindow.on("moved", () => {
+    const [x, y] = mainWindow.getPosition();
+    store.set("windowX", x);
+    store.set("windowY", y);
+  });
+  mainWindow.setAlwaysOnTop(true, "screen-saver");
+  mainWindow.webContents.on("did-finish-load", () => {
+    console.log("Window loaded successfully!");
+  });
+  mainWindow.webContents.on("did-fail-load", (event, errorCode, errorDescription) => {
+    console.error("Failed to load:", errorCode, errorDescription);
+  });
+  mainWindow.on("moved", () => {
+    if (isExpanded && mainWindow) {
+      const [currentX, currentY] = mainWindow.getPosition();
+      const [windowWidth, windowHeight] = mainWindow.getSize();
+      const currentDisplay = screen.getDisplayNearestPoint({ x: currentX, y: currentY });
+      const { x: screenX, y: screenY, width: screenWidth2, height: screenHeight2 } = currentDisplay.workArea;
+      const minX = screenX - windowWidth / 2;
+      const minY = screenY;
+      const maxX = screenX + screenWidth2 - windowWidth / 2;
+      const maxY = screenY + screenHeight2 - windowHeight / 2;
+      let newX = currentX;
+      let newY = currentY;
+      let needsCorrection = false;
+      if (currentX < minX) {
+        newX = minX;
+        needsCorrection = true;
+      }
+      if (currentX > maxX) {
+        newX = maxX;
+        needsCorrection = true;
+      }
+      if (currentY < minY) {
+        newY = minY;
+        needsCorrection = true;
+      }
+      if (currentY > maxY) {
+        newY = maxY;
+        needsCorrection = true;
+      }
+      if (needsCorrection) {
+        mainWindow.setPosition(Math.round(newX), Math.round(newY));
+      }
+    }
+  });
+}
+function createTray() {
+  const iconPath = path.join(__dirname, "../ball-icon.png");
+  const icon = nativeImage.createFromPath(iconPath).resize({ width: 32, height: 32 });
+  tray = new Tray(icon);
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: "Show/Hide",
+      click: () => {
+        if (mainWindow) {
+          if (mainWindow.isVisible()) {
+            mainWindow.hide();
+          } else {
+            mainWindow.show();
+            mainWindow.focus();
+          }
+        }
+      }
+    },
+    {
+      label: "Toggle Expand",
+      click: () => {
+        if (mainWindow && mainWindow.isVisible()) {
+          mainWindow.webContents.send("toggle-from-tray");
+        }
+      }
+    },
+    { type: "separator" },
+    {
+      label: "Quit",
+      click: () => {
+        app.quit();
+      }
+    }
+  ]);
+  tray.setToolTip("Juno");
+  tray.setContextMenu(contextMenu);
+  tray.on("double-click", () => {
+    if (mainWindow) {
+      if (mainWindow.isVisible()) {
+        mainWindow.hide();
+      } else {
+        mainWindow.show();
+        mainWindow.focus();
+      }
+    }
+  });
+}
+function registerHotkeys() {
+  const ret = globalShortcut.register("CommandOrControl+Shift+N", () => {
+    if (mainWindow) {
+      if (mainWindow.isVisible()) {
+        mainWindow.hide();
+      } else {
+        mainWindow.show();
+        mainWindow.focus();
+      }
+    }
+  });
+  if (!ret) {
+    console.log("Registration failed");
+  }
+}
+app.whenReady().then(() => {
+  initDatabase();
+  createTray();
+  createWindow();
+  registerHotkeys();
+  startNotificationScheduler(mainWindow);
+  powerMonitor.on("resume", () => {
+    console.log("System resumed from sleep — re-checking notifications");
+    checkDueReminders(mainWindow);
+  });
+  powerMonitor.on("unlock-screen", () => {
+    console.log("Screen unlocked — re-checking notifications");
+    checkDueReminders(mainWindow);
+  });
+  app.setLoginItemSettings({
+    openAtLogin: true,
+    args: ["--hidden"]
+    // Start hidden in tray on auto-launch
+  });
+  app.on("activate", () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    }
+  });
+});
+app.on("window-all-closed", (e) => {
+  e.preventDefault();
+});
+app.on("will-quit", () => {
+  globalShortcut.unregisterAll();
+});
+ipcMain.handle("get-notes", async () => {
+  return getAllNotes();
+});
+ipcMain.handle("add-note", async (event, noteData) => {
+  const note = addNote(noteData);
+  if (noteData.reminderAt) {
+    scheduleNotification(note, mainWindow);
+  }
+  return note;
+});
+ipcMain.handle("update-note", async (event, id, updates) => {
+  return updateNote(id, updates);
+});
+ipcMain.handle("delete-note", async (event, id) => {
+  return deleteNote(id);
+});
+ipcMain.handle("get-tasks", async () => {
+  return getAllTasks();
+});
+ipcMain.handle("add-task", async (event, taskData) => {
+  const task = addTask(taskData);
+  if (taskData.reminderAt) {
+    scheduleNotification({
+      content: `Task: ${task.title}`,
+      reminderAt: task.reminderAt,
+      id: `task-${task.id}`
+    }, mainWindow);
+  }
+  return task;
+});
+ipcMain.handle("delete-task", async (event, id) => {
+  return deleteTask(id);
+});
+ipcMain.handle("update-task", async (event, id, updates) => {
+  const task = updateTask(id, updates);
+  if (updates.reminderAt) {
+    scheduleNotification({
+      content: `Task: ${task.title}`,
+      reminderAt: task.reminderAt,
+      id: `task-${task.id}`
+    }, mainWindow);
+  }
+  return task;
+});
+ipcMain.handle("get-folders", async (event, parentId) => getFolders(parentId));
+ipcMain.handle("get-files", async (event, folderId) => getFiles(folderId));
+ipcMain.handle("create-folder", async (event, name, parentId) => createFolder(name, parentId));
+ipcMain.handle("add-file", async (event, fileData) => addFile(fileData));
+ipcMain.handle("delete-folder", async (event, id) => deleteFolder(id));
+ipcMain.handle("delete-file", async (event, id) => deleteFile(id));
+ipcMain.handle("rename-folder", async (event, id, newName) => renameFolder(id, newName));
+ipcMain.handle("rename-file", async (event, id, newName) => renameFile(id, newName));
+ipcMain.handle("move-file", async (event, id, targetFolderId) => moveFile(id, targetFolderId));
+ipcMain.handle("open-file", async (event, path2) => {
+  await shell.openPath(path2);
+});
+ipcMain.handle("reveal-file", async (event, path2) => {
+  shell.showItemInFolder(path2);
+});
+ipcMain.handle("toggle-expand", async (event, expanded) => {
+  isExpanded = expanded;
+  const [currentX, currentY] = mainWindow.getPosition();
+  const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize;
+  if (expanded) {
+    mainWindow.setResizable(true);
+    mainWindow.setMovable(true);
+    mainWindow.setMinimumSize(300, 400);
+    mainWindow.setMaximumSize(800, 1e3);
+    mainWindow.setSize(EXPANDED_WIDTH, EXPANDED_HEIGHT, true);
+    const minVisibleX = -200;
+    const maxVisibleX = screenWidth - EXPANDED_WIDTH / 2;
+    const minVisibleY = 0;
+    const maxVisibleY = screenHeight - EXPANDED_HEIGHT / 2;
+    const newX = Math.max(minVisibleX, Math.min(maxVisibleX, currentX));
+    const newY = Math.max(minVisibleY, Math.min(maxVisibleY, currentY));
+    mainWindow.setPosition(Math.round(newX), Math.round(newY));
+  } else {
+    mainWindow.setResizable(false);
+    mainWindow.setMovable(false);
+    mainWindow.setMinimumSize(COLLAPSED_SIZE, COLLAPSED_SIZE);
+    mainWindow.setMaximumSize(COLLAPSED_SIZE, COLLAPSED_SIZE);
+    mainWindow.setSize(COLLAPSED_SIZE, COLLAPSED_SIZE, true);
+    setTimeout(async () => {
+      if (!isExpanded && mainWindow) {
+        const [currentX2, currentY2] = mainWindow.getPosition();
+        const [windowWidth, windowHeight] = mainWindow.getSize();
+        const centerX = currentX2 + windowWidth / 2;
+        const centerY = currentY2 + windowHeight / 2;
+        const padding = 20;
+        const snapPositions = [
+          // Corners
+          { x: padding, y: padding },
+          { x: screenWidth - windowWidth - padding, y: padding },
+          { x: padding, y: screenHeight - windowHeight - padding },
+          { x: screenWidth - windowWidth - padding, y: screenHeight - windowHeight - padding },
+          // Edges
+          { x: padding, y: (screenHeight - windowHeight) / 2 },
+          { x: screenWidth - windowWidth - padding, y: (screenHeight - windowHeight) / 2 },
+          { x: (screenWidth - windowWidth) / 2, y: padding },
+          { x: (screenWidth - windowWidth) / 2, y: screenHeight - windowHeight - padding }
+        ];
+        let nearestPosition = snapPositions[0];
+        let minDistance = Infinity;
+        for (const pos of snapPositions) {
+          const posCenter = {
+            x: pos.x + windowWidth / 2,
+            y: pos.y + windowHeight / 2
+          };
+          const distance = Math.sqrt(
+            Math.pow(centerX - posCenter.x, 2) + Math.pow(centerY - posCenter.y, 2)
+          );
+          if (distance < minDistance) {
+            minDistance = distance;
+            nearestPosition = pos;
+          }
+        }
+        mainWindow.setPosition(Math.round(nearestPosition.x), Math.round(nearestPosition.y));
+        store.set("windowX", nearestPosition.x);
+        store.set("windowY", nearestPosition.y);
+      }
+    }, 100);
+  }
+  const [x, y] = mainWindow.getPosition();
+  store.set("windowX", x);
+  store.set("windowY", y);
+  return { expanded };
+});
+ipcMain.handle("start-drag", async () => {
+  return true;
+});
+ipcMain.handle("get-window-position", async () => {
+  if (mainWindow) {
+    const [x, y] = mainWindow.getPosition();
+    return { x, y };
+  }
+  return { x: 0, y: 0 };
+});
+ipcMain.handle("get-theme", async () => {
+  return store.get("theme", "dark");
+});
+ipcMain.handle("set-theme", async (event, theme) => {
+  store.set("theme", theme);
+  return theme;
+});
+ipcMain.on("close-app", () => {
+  app.quit();
+});
+ipcMain.on("hide-window", () => {
+  if (mainWindow) {
+    mainWindow.hide();
+  }
+});
+ipcMain.on("quit-app", () => {
+  app.quit();
+});
+ipcMain.handle("show-context-menu", async () => {
+  if (!mainWindow) return;
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: "Hide",
+      click: () => {
+        if (mainWindow) {
+          mainWindow.hide();
+        }
+      }
+    },
+    { type: "separator" },
+    {
+      label: "Quit",
+      click: () => {
+        app.quit();
+      }
+    }
+  ]);
+  contextMenu.popup({ window: mainWindow });
+});
+ipcMain.on("set-ignore-mouse-events", (event, ignore) => {
+  if (mainWindow) {
+    if (ignore) {
+      mainWindow.setIgnoreMouseEvents(true, { forward: true });
+    } else {
+      mainWindow.setIgnoreMouseEvents(false);
+    }
+  }
+});
+ipcMain.handle("set-window-position", async (event, x, y) => {
+  if (mainWindow && typeof x === "number" && typeof y === "number" && !isNaN(x) && !isNaN(y)) {
+    const currentDisplay = screen.getDisplayNearestPoint({ x, y });
+    const { x: screenX, y: screenY, width: screenWidth, height: screenHeight } = currentDisplay.workArea;
+    const [windowWidth, windowHeight] = mainWindow.getSize();
+    const minX = screenX - windowWidth / 2;
+    const minY = screenY - windowHeight / 2;
+    const maxX = screenX + screenWidth - windowWidth / 2;
+    const maxY = screenY + screenHeight - windowHeight / 2;
+    const boundedX = Math.round(Math.max(minX, Math.min(maxX, x)));
+    const boundedY = Math.round(Math.max(minY, Math.min(maxY, y)));
+    if (!isExpanded) {
+      mainWindow.setBounds({
+        x: boundedX,
+        y: boundedY,
+        width: 80,
+        height: 80
+      });
+    } else {
+      mainWindow.setPosition(boundedX, boundedY);
+    }
+  }
+});
+ipcMain.handle("finalize-drag", async () => {
+  if (mainWindow && !isExpanded) {
+    mainWindow.setSize(80, 80);
+    mainWindow.setResizable(false);
+    mainWindow.setMovable(false);
+    return true;
+  }
+  return false;
+});
+ipcMain.handle("snap-to-edge", async () => {
+  if (!mainWindow || isExpanded) {
+    return;
+  }
+  const [currentX, currentY] = mainWindow.getPosition();
+  const [windowWidth, windowHeight] = mainWindow.getSize();
+  const centerX = currentX + windowWidth / 2;
+  const centerY = currentY + windowHeight / 2;
+  const currentDisplay = screen.getDisplayNearestPoint({ x: centerX, y: centerY });
+  const { x: screenX, y: screenY, width: screenWidth, height: screenHeight } = currentDisplay.workArea;
+  const padding = 20;
+  const snapPositions = [
+    // Corners
+    { x: screenX + padding, y: screenY + padding, name: "top-left" },
+    { x: screenX + screenWidth - windowWidth - padding, y: screenY + padding, name: "top-right" },
+    { x: screenX + padding, y: screenY + screenHeight - windowHeight - padding, name: "bottom-left" },
+    { x: screenX + screenWidth - windowWidth - padding, y: screenY + screenHeight - windowHeight - padding, name: "bottom-right" },
+    // Edges (middle of each side)
+    { x: screenX + padding, y: screenY + (screenHeight - windowHeight) / 2, name: "left-middle" },
+    { x: screenX + screenWidth - windowWidth - padding, y: screenY + (screenHeight - windowHeight) / 2, name: "right-middle" },
+    { x: screenX + (screenWidth - windowWidth) / 2, y: screenY + padding, name: "top-middle" },
+    { x: screenX + (screenWidth - windowWidth) / 2, y: screenY + screenHeight - windowHeight - padding, name: "bottom-middle" }
+  ];
+  let nearestPosition = snapPositions[0];
+  let minDistance = Infinity;
+  for (const pos of snapPositions) {
+    const posCenter = {
+      x: pos.x + windowWidth / 2,
+      y: pos.y + windowHeight / 2
+    };
+    const distance = Math.sqrt(
+      Math.pow(centerX - posCenter.x, 2) + Math.pow(centerY - posCenter.y, 2)
+    );
+    if (distance < minDistance) {
+      minDistance = distance;
+      nearestPosition = pos;
+    }
+  }
+  mainWindow.setPosition(Math.round(nearestPosition.x), Math.round(nearestPosition.y));
+  store.set("windowX", nearestPosition.x);
+  store.set("windowY", nearestPosition.y);
+  return { x: nearestPosition.x, y: nearestPosition.y, edge: nearestPosition.name };
+});
+ipcMain.handle("select-file", async () => {
+  if (!mainWindow) return [];
+  try {
+    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+      properties: ["openFile", "multiSelections"]
+    });
+    if (canceled) return [];
+    return filePaths.map((filePath) => {
+      try {
+        const stats = fs.statSync(filePath);
+        return {
+          name: path.basename(filePath),
+          originalPath: filePath,
+          size: stats.size,
+          fileType: "file"
+        };
+      } catch (e) {
+        console.error("Error reading file stats:", e);
+        return null;
+      }
+    }).filter((f) => f !== null);
+  } catch (err) {
+    console.error("Error selecting file:", err);
+    return [];
+  }
+});
+ipcMain.on("ondragstart", async (event, filePath) => {
+  if (!mainWindow) return;
+  try {
+    const icon = await app.getFileIcon(filePath);
+    event.sender.startDrag({
+      file: filePath,
+      icon
+    });
+  } catch (e) {
+    console.error("Drag error:", e);
+  }
+});
+ipcMain.on("set-window-position", (event, { x, y }) => {
+  if (mainWindow) {
+    mainWindow.setPosition(Math.round(x), Math.round(y));
+  }
+});

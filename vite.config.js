@@ -48,6 +48,18 @@ export default defineConfig({
             }
           }
         }
+      },
+      {
+        // Notifications script
+        entry: 'electron/notifications.js',
+        vite: {
+          build: {
+            outDir: 'dist-electron',
+            rollupOptions: {
+              external: ['electron']
+            }
+          }
+        }
       }
     ]),
     renderer()

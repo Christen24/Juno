@@ -94,7 +94,10 @@
       "shortcutName": "Juno",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "runAfterFinish": true
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": true,
+      "uninstallDisplayName": "Juno",
+      "include": "installer.nsh"
     }
   }
 }
